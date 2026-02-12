@@ -181,8 +181,11 @@
       position: sticky;
       top: 0;
       width: 100%;
-      padding: calc(var(--safe-top) + 10px) 20px 10px;
-      text-align: center;
+      padding: calc(var(--safe-top) + 10px) 20px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
       background: linear-gradient(180deg, var(--deep) 0%, rgba(7,15,27,0.95) 60%, transparent 100%);
       z-index: 10;
     }
@@ -192,6 +195,20 @@
       font-weight: 400;
       letter-spacing: 0.04em;
       color: var(--white);
+    }
+    .heading-display {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.85rem;
+      font-weight: 300;
+      color: var(--white70);
+      font-variant-numeric: tabular-nums;
+    }
+    .heading-cardinal {
+      color: var(--teal);
+      font-weight: 600;
+      font-size: 0.75rem;
     }
 
     /* Search Button */
@@ -484,6 +501,14 @@
       accent-color: var(--teal);
       height: 4px;
     }
+    .slider-heading-value {
+      font-size: 0.85rem;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+      color: var(--white70);
+      min-width: 36px;
+      text-align: right;
+    }
 
     /* Bottom spacer */
     .bottom-spacer {
@@ -556,6 +581,10 @@
     <div id="screen-result" class="screen result-screen" hidden>
       <div class="app-title-bar">
         <h1>Beyond the Sea</h1>
+        <span id="heading-display" class="heading-display">
+          <span id="heading-deg">---°</span>
+          <span id="heading-cardinal" class="heading-cardinal">--</span>
+        </span>
       </div>
 
       <button id="btn-search" class="search-btn">
@@ -614,10 +643,11 @@
         <p id="dest-extract" class="dest-extract"></p>
       </div>
 
-      <!-- Manual Heading (desktop fallback) -->
+      <!-- Manual Heading (desktop-only fallback, hidden on mobile) -->
       <div id="manual-heading" class="manual-heading" hidden>
         <label for="heading-slider">Heading</label>
         <input type="range" id="heading-slider" min="0" max="359" value="270" step="1">
+        <span id="slider-heading-value" class="slider-heading-value">270°</span>
       </div>
 
       <div class="bottom-spacer"></div>
@@ -915,18 +945,31 @@
     }
 
     async function getPlaceInfo(lat, lng) {
-      // Fetch multiple cities >5K pop and pick the most notable by score
+      // Step 1: Find the nearest place (any size) — this correctly names
+      // islands, small towns, and other features near the landfall point
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&radius=50&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        if (data.geonames && data.geonames.length > 0) {
+          // Pick the nearest place within 50km
+          const nearest = data.geonames[0];
+          console.log('[BTS] Nearest place:', nearest.name, `(${parseFloat(nearest.distance).toFixed(1)}km, pop ${nearest.population})`);
+          return buildPlaceResult(nearest);
+        }
+      } catch (e) { /* fall through */ }
+
+      // Step 2: Try notable cities within 300km (for remote coastlines)
       try {
         const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=10&radius=300&cities=cities5000&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
         if (data.geonames && data.geonames.length > 0) {
           const scored = scorePlaces(data.geonames);
-          console.log('[BTS] Place candidates:', scored.map(s => `${s.place.name} (pop ${s.place.population}, ${parseFloat(s.place.distance).toFixed(0)}km, score ${s.score.toFixed(2)})`).join(', '));
+          console.log('[BTS] City candidates:', scored.map(s => `${s.place.name} (pop ${s.place.population}, ${parseFloat(s.place.distance).toFixed(0)}km, score ${s.score.toFixed(2)})`).join(', '));
           return buildPlaceResult(scored[0].place);
         }
       } catch (e) { /* fall through */ }
 
-      // Fallback: any nearby place
+      // Step 3: Any nearby place with wider radius
       try {
         const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=300&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
@@ -1062,6 +1105,11 @@
     }
 
     // ===== Compass =====
+    function getCardinal(deg) {
+      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(deg / 22.5) % 16];
+    }
+
     function handleOrientation(event) {
       let raw;
       if (event.webkitCompassHeading !== undefined) {
@@ -1086,7 +1134,9 @@
     }
 
     function updateCompassDisplay(heading) {
-      // Compass bar removed; only update desktop slider display if visible
+      $('heading-deg').textContent = `${heading}\u00B0`;
+      $('heading-cardinal').textContent = getCardinal(heading);
+      // Also sync the desktop slider if visible
       const slider = $('heading-slider');
       if (slider && !slider.parentElement.hidden) {
         slider.value = heading;
@@ -1165,8 +1215,8 @@
       }
 
       // Set main destination info
-      const countryParts = [result.country, result.region].filter(Boolean);
-      const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2L12 22M5 9l7-7 7 7"/></svg>${formatDistance(result.distanceKm)}`;
+      const countryParts = [result.region, result.country].filter(Boolean);
+      const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5"/><path d="M12 5v14"/></svg>${formatDistance(result.distanceKm)}`;
       setDestination(result.name, countryParts.join(', '), distHtml);
 
       // Update route map
@@ -1276,7 +1326,7 @@
 
     function formatDistance(km) {
       const mi = Math.round(km * 0.621371);
-      return `${km.toLocaleString()} km (${mi.toLocaleString()} mi)`;
+      return `${mi.toLocaleString()} mi (${km.toLocaleString()} km)`;
     }
 
     function formatPopulation(pop) {
@@ -1339,8 +1389,6 @@
         if (!gotOrientation) {
           gotOrientation = true;
           console.log('[BTS] Compass active');
-          const manual = $('manual-heading');
-          if (manual) manual.hidden = true;
         }
         handleOrientation(event);
       }
@@ -1350,16 +1398,20 @@
       }
       window.addEventListener('deviceorientation', onOrientation, true);
 
-      // Desktop fallback
-      setTimeout(() => {
-        if (!gotOrientation) {
-          console.log('[BTS] No compass — showing slider');
-          const manual = $('manual-heading');
-          if (manual) manual.hidden = false;
-          state.heading = 270;
-          updateCompassDisplay(270);
-        }
-      }, 2000);
+      // Desktop fallback: only show slider if no compass detected
+      // Skip entirely on touch devices (they have a compass even if events are slow)
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (!isTouchDevice) {
+        setTimeout(() => {
+          if (!gotOrientation) {
+            console.log('[BTS] No compass — showing slider');
+            const manual = $('manual-heading');
+            if (manual) manual.hidden = false;
+            state.heading = 270;
+            updateCompassDisplay(270);
+          }
+        }, 2000);
+      }
 
       navigator.geolocation.watchPosition(
         (pos) => {
@@ -1403,6 +1455,8 @@
       const heading = parseInt(e.target.value, 10);
       state.heading = heading;
       updateCompassDisplay(heading);
+      const sliderVal = $('slider-heading-value');
+      if (sliderVal) sliderVal.textContent = `${heading}\u00B0`;
     });
   </script>
 </body>

@@ -176,6 +176,79 @@
       -webkit-overflow-scrolling: touch;
     }
 
+    /* Pre-search View */
+    .pre-search {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: calc(var(--safe-top) + 20px) 20px 40px;
+      z-index: 1;
+      text-align: center;
+    }
+    .pre-search__title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .pre-search__subtitle {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--white40);
+      margin-bottom: 36px;
+      font-weight: 500;
+    }
+    .pre-search__compass {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .pre-search__compass-ring {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 1.5px solid var(--white15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pre-search__tick {
+      position: absolute;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--white40);
+    }
+    .pre-search__tick--n { top: 8px; left: 50%; transform: translateX(-50%); color: var(--teal); }
+    .pre-search__tick--s { bottom: 8px; left: 50%; transform: translateX(-50%); }
+    .pre-search__tick--e { right: 8px; top: 50%; transform: translateY(-50%); }
+    .pre-search__tick--w { left: 8px; top: 50%; transform: translateY(-50%); }
+    .compass-needle--large {
+      width: 56px;
+      height: 56px;
+    }
+    .heading-cardinal--large {
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+    }
+    .search-btn--large {
+      padding: 14px 44px;
+      font-size: 1.05rem;
+    }
+    .post-search {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
     /* App Title Bar */
     .app-title-bar {
       position: sticky;
@@ -584,83 +657,118 @@
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen result-screen" hidden>
-      <div class="app-title-bar">
-        <h1>Beyond the Sea</h1>
-        <div class="compass-row">
-          <div id="compass-needle" class="compass-needle">
-            <svg viewBox="0 0 24 24" fill="none">
-              <polygon points="12,2 15,12 12,10 9,12" fill="#4ecdc4"/>
-              <polygon points="12,22 9,12 12,14 15,12" fill="rgba(255,255,255,0.25)"/>
-            </svg>
+
+      <!-- Pre-search view: shown before first search -->
+      <div id="pre-search" class="pre-search">
+        <h1 class="pre-search__title">Beyond the Sea</h1>
+        <p class="pre-search__subtitle">Face the direction you want to explore</p>
+
+        <div class="pre-search__compass">
+          <div class="pre-search__compass-ring">
+            <span class="pre-search__tick pre-search__tick--n">N</span>
+            <span class="pre-search__tick pre-search__tick--e">E</span>
+            <span class="pre-search__tick pre-search__tick--s">S</span>
+            <span class="pre-search__tick pre-search__tick--w">W</span>
+            <div id="compass-needle" class="compass-needle compass-needle--large">
+              <svg viewBox="0 0 24 24" fill="none">
+                <polygon points="12,2 15,12 12,10 9,12" fill="#4ecdc4"/>
+                <polygon points="12,22 9,12 12,14 15,12" fill="rgba(255,255,255,0.25)"/>
+              </svg>
+            </div>
           </div>
-          <span id="heading-cardinal" class="heading-cardinal">--</span>
+          <span id="heading-cardinal" class="heading-cardinal heading-cardinal--large">--</span>
+        </div>
+
+        <button id="btn-search" class="search-btn search-btn--large">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          Search
+        </button>
+
+        <div id="computing-badge" class="computing-badge">
+          <span class="computing-dot"></span>
+          <span>Searching across the water...</span>
+        </div>
+
+        <!-- Manual Heading (desktop-only fallback, hidden on mobile) -->
+        <div id="manual-heading" class="manual-heading" hidden>
+          <label for="heading-slider">Heading</label>
+          <input type="range" id="heading-slider" min="0" max="359" value="270" step="1">
+          <span id="slider-heading-value" class="slider-heading-value">270°</span>
         </div>
       </div>
 
-      <button id="btn-search" class="search-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        Search
-      </button>
-
-      <div id="computing-badge" class="computing-badge">
-        <span class="computing-dot"></span>
-        <span>Searching across the water...</span>
-      </div>
-
-      <!-- Destination Info (above photo for immediate visibility) -->
-      <div id="dest-info" class="dest-info">
-        <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
-        <h2 id="dest-name" class="dest-name">Searching...</h2>
-        <p id="dest-country" class="dest-country"></p>
-        <p id="dest-distance" class="dest-distance"></p>
-        <!-- Ocean Badge (inside dest-info) -->
-        <div id="ocean-badge" class="ocean-badge" style="display:none">
-          <svg viewBox="0 0 24 24"><path d="M2,12 C4,8 6,16 8,12 C10,8 12,16 14,12 C16,8 18,16 20,12 C22,8 24,12 24,12"/></svg>
-          <span id="ocean-name">Pacific Ocean</span>
+      <!-- Post-search view: shown after first search -->
+      <div id="post-search" class="post-search" style="display:none">
+        <div class="app-title-bar">
+          <h1>Beyond the Sea</h1>
+          <div class="compass-row">
+            <div id="compass-needle-sm" class="compass-needle">
+              <svg viewBox="0 0 24 24" fill="none">
+                <polygon points="12,2 15,12 12,10 9,12" fill="#4ecdc4"/>
+                <polygon points="12,22 9,12 12,14 15,12" fill="rgba(255,255,255,0.25)"/>
+              </svg>
+            </div>
+            <span id="heading-cardinal-sm" class="heading-cardinal">--</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Hero Photo -->
-      <div id="hero-photo" class="hero-photo hero-photo--loading">
-        <div class="hero-photo__placeholder">&#x1F30A;</div>
-        <img id="hero-img" src="" alt="" crossorigin="anonymous">
-        <span id="hero-credit" class="hero-photo__credit"></span>
-      </div>
+        <button id="btn-search-again" class="search-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          Search
+        </button>
 
-      <!-- Route Map -->
-      <div id="route-map-container" class="route-map-container" hidden>
-        <div id="route-map"></div>
-      </div>
-
-      <!-- Fun Facts Grid (below map) -->
-      <div id="facts-grid" class="facts-grid" style="display:none">
-        <div class="fact-card" id="fact-timezone">
-          <div class="fact-label">Local Time</div>
-          <div class="fact-value fact-value--small" id="fact-tz-value">--</div>
+        <div id="computing-badge-2" class="computing-badge">
+          <span class="computing-dot"></span>
+          <span>Searching across the water...</span>
         </div>
-        <div class="fact-card" id="fact-region">
-          <div class="fact-label">Region</div>
-          <div class="fact-value fact-value--small" id="fact-region-value">--</div>
+
+        <!-- Destination Info -->
+        <div id="dest-info" class="dest-info">
+          <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
+          <h2 id="dest-name" class="dest-name">Searching...</h2>
+          <p id="dest-country" class="dest-country"></p>
+          <p id="dest-distance" class="dest-distance"></p>
+          <div id="ocean-badge" class="ocean-badge" style="display:none">
+            <svg viewBox="0 0 24 24"><path d="M2,12 C4,8 6,16 8,12 C10,8 12,16 14,12 C16,8 18,16 20,12 C22,8 24,12 24,12"/></svg>
+            <span id="ocean-name">Pacific Ocean</span>
+          </div>
         </div>
-        <div class="fact-card" id="fact-continent">
-          <div class="fact-label">Continent</div>
-          <div class="fact-value fact-value--small" id="fact-continent-value">--</div>
+
+        <!-- Hero Photo -->
+        <div id="hero-photo" class="hero-photo hero-photo--loading">
+          <div class="hero-photo__placeholder">&#x1F30A;</div>
+          <img id="hero-img" src="" alt="" crossorigin="anonymous">
+          <span id="hero-credit" class="hero-photo__credit"></span>
         </div>
-      </div>
 
-      <!-- Description (at bottom, fully scrollable) -->
-      <div id="dest-description" class="dest-description" style="display:none">
-        <p id="dest-extract" class="dest-extract"></p>
-      </div>
+        <!-- Route Map -->
+        <div id="route-map-container" class="route-map-container" hidden>
+          <div id="route-map"></div>
+        </div>
 
-      <!-- Manual Heading (desktop-only fallback, hidden on mobile) -->
-      <div id="manual-heading" class="manual-heading" hidden>
-        <label for="heading-slider">Heading</label>
-        <input type="range" id="heading-slider" min="0" max="359" value="270" step="1">
-        <span id="slider-heading-value" class="slider-heading-value">270°</span>
-      </div>
+        <!-- Fun Facts Grid -->
+        <div id="facts-grid" class="facts-grid" style="display:none">
+          <div class="fact-card" id="fact-timezone">
+            <div class="fact-label">Local Time</div>
+            <div class="fact-value fact-value--small" id="fact-tz-value">--</div>
+          </div>
+          <div class="fact-card" id="fact-region">
+            <div class="fact-label">Region</div>
+            <div class="fact-value fact-value--small" id="fact-region-value">--</div>
+          </div>
+          <div class="fact-card" id="fact-continent">
+            <div class="fact-label">Continent</div>
+            <div class="fact-value fact-value--small" id="fact-continent-value">--</div>
+          </div>
+        </div>
 
-      <div class="bottom-spacer"></div>
+        <!-- Description -->
+        <div id="dest-description" class="dest-description" style="display:none">
+          <p id="dest-extract" class="dest-extract"></p>
+        </div>
+
+        <div class="bottom-spacer"></div>
+      </div>
 
       <div class="waves">
         <div class="wave wave--1"></div>
@@ -1144,8 +1252,15 @@
     }
 
     function updateCompassDisplay(heading) {
+      const cardinal = getCardinal(heading);
+      // Update pre-search compass (large)
       $('compass-needle').style.transform = `rotate(${heading}deg)`;
-      $('heading-cardinal').textContent = getCardinal(heading);
+      $('heading-cardinal').textContent = cardinal;
+      // Update post-search compass (small, in title bar)
+      const sm = $('compass-needle-sm');
+      if (sm) sm.style.transform = `rotate(${heading}deg)`;
+      const cardSm = $('heading-cardinal-sm');
+      if (cardSm) cardSm.textContent = cardinal;
       // Also sync the desktop slider if visible
       const slider = $('heading-slider');
       if (slider && !slider.parentElement.hidden) {
@@ -1348,7 +1463,11 @@
 
     function showComputing(visible) {
       $('computing-badge').classList.toggle('visible', visible);
+      const badge2 = $('computing-badge-2');
+      if (badge2) badge2.classList.toggle('visible', visible);
       $('btn-search').disabled = visible;
+      const btn2 = $('btn-search-again');
+      if (btn2) btn2.disabled = visible;
       if (visible) {
         $('dest-info').classList.add('dest--faded');
       }
@@ -1456,11 +1575,21 @@
 
     $('btn-retry').addEventListener('click', () => showScreen('welcome'));
 
-    $('btn-search').addEventListener('click', () => {
+    function doSearch() {
       if (state.heading === null) return;
+      // Transition to post-search view on first search
+      const preSearch = $('pre-search');
+      const postSearch = $('post-search');
+      if (preSearch && preSearch.style.display !== 'none') {
+        preSearch.style.display = 'none';
+        postSearch.style.display = '';
+      }
       const bucket = Math.round(state.heading / CONFIG.HEADING_BUCKET_DEG) * CONFIG.HEADING_BUCKET_DEG;
       triggerComputation(bucket);
-    });
+    }
+
+    $('btn-search').addEventListener('click', doSearch);
+    $('btn-search-again').addEventListener('click', doSearch);
 
     $('heading-slider').addEventListener('input', (e) => {
       const heading = parseInt(e.target.value, 10);

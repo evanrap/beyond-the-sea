@@ -181,11 +181,8 @@
       position: sticky;
       top: 0;
       width: 100%;
-      padding: calc(var(--safe-top) + 10px) 20px 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
+      padding: calc(var(--safe-top) + 8px) 20px 6px;
+      text-align: center;
       background: linear-gradient(180deg, var(--deep) 0%, rgba(7,15,27,0.95) 60%, transparent 100%);
       z-index: 10;
     }
@@ -195,20 +192,25 @@
       font-weight: 400;
       letter-spacing: 0.04em;
       color: var(--white);
+      margin-bottom: 4px;
     }
-    .heading-display {
+    .compass-row {
       display: flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.85rem;
-      font-weight: 300;
-      color: var(--white70);
-      font-variant-numeric: tabular-nums;
+      justify-content: center;
+      gap: 6px;
     }
+    .compass-needle {
+      width: 18px;
+      height: 18px;
+      transition: transform 0.3s ease;
+    }
+    .compass-needle svg { width: 100%; height: 100%; }
     .heading-cardinal {
       color: var(--teal);
       font-weight: 600;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
     }
 
     /* Search Button */
@@ -472,7 +474,10 @@
       background: rgba(10,22,40,0.95) !important;
     }
 
-    /* Manual Heading Slider */
+    /* Manual Heading Slider (desktop only) */
+    @media (hover: none) and (pointer: coarse) {
+      .manual-heading { display: none !important; }
+    }
     .manual-heading {
       width: calc(100% - 32px);
       max-width: 420px;
@@ -510,9 +515,9 @@
       text-align: right;
     }
 
-    /* Bottom spacer */
+    /* Bottom spacer — must clear the wave overlay (200px) plus safe area */
     .bottom-spacer {
-      height: calc(var(--safe-bottom) + 20px);
+      height: calc(var(--safe-bottom) + 220px);
       flex-shrink: 0;
     }
 
@@ -581,10 +586,15 @@
     <div id="screen-result" class="screen result-screen" hidden>
       <div class="app-title-bar">
         <h1>Beyond the Sea</h1>
-        <span id="heading-display" class="heading-display">
-          <span id="heading-deg">---°</span>
+        <div class="compass-row">
+          <div id="compass-needle" class="compass-needle">
+            <svg viewBox="0 0 24 24" fill="none">
+              <polygon points="12,2 15,12 12,10 9,12" fill="#4ecdc4"/>
+              <polygon points="12,22 9,12 12,14 15,12" fill="rgba(255,255,255,0.25)"/>
+            </svg>
+          </div>
           <span id="heading-cardinal" class="heading-cardinal">--</span>
-        </span>
+        </div>
       </div>
 
       <button id="btn-search" class="search-btn">
@@ -945,13 +955,13 @@
     }
 
     async function getPlaceInfo(lat, lng) {
-      // Step 1: Find the nearest place (any size) — this correctly names
-      // islands, small towns, and other features near the landfall point
+      // Step 1: Find the nearest place (any size) within 10km — this correctly names
+      // islands, small towns, and features right at the landfall point without
+      // picking up distant mainland cities
       try {
-        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&radius=50&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&radius=10&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
         if (data.geonames && data.geonames.length > 0) {
-          // Pick the nearest place within 50km
           const nearest = data.geonames[0];
           console.log('[BTS] Nearest place:', nearest.name, `(${parseFloat(nearest.distance).toFixed(1)}km, pop ${nearest.population})`);
           return buildPlaceResult(nearest);
@@ -1134,7 +1144,7 @@
     }
 
     function updateCompassDisplay(heading) {
-      $('heading-deg').textContent = `${heading}\u00B0`;
+      $('compass-needle').style.transform = `rotate(${heading}deg)`;
       $('heading-cardinal').textContent = getCardinal(heading);
       // Also sync the desktop slider if visible
       const slider = $('heading-slider');
@@ -1216,7 +1226,8 @@
 
       // Set main destination info
       const countryParts = [result.region, result.country].filter(Boolean);
-      const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5-5 5 5"/><path d="M12 5v14"/></svg>${formatDistance(result.distanceKm)}`;
+      const arrowDeg = state.heading || 0;
+      const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${arrowDeg}deg);flex-shrink:0"><path d="M7 10l5-5 5 5"/><path d="M12 5v14"/></svg>${formatDistance(result.distanceKm)}`;
       setDestination(result.name, countryParts.join(', '), distHtml);
 
       // Update route map

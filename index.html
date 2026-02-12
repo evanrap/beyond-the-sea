@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Beyond the Sea</title>
+  <link rel="preconnect" href="https://upload.wikimedia.org">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --deep: #070f1b;
+      --navy: #0a1628;
+      --ocean: #0f2b4a;
+      --sea: #1a4a6e;
+      --teal: #4ecdc4;
+      --coral: #ff6b6b;
+      --sand: #f7d794;
+      --white: #ffffff;
+      --white70: rgba(255,255,255,0.7);
+      --white40: rgba(255,255,255,0.4);
+      --white15: rgba(255,255,255,0.15);
+      --white08: rgba(255,255,255,0.08);
+      --glass: rgba(255,255,255,0.06);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--white);
+      background: var(--deep);
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Screens ===== */
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(170deg, var(--deep) 0%, var(--ocean) 40%, var(--sea) 100%);
+      transition: opacity 0.5s ease;
+    }
+    .screen[hidden] { display: none; }
+
+    /* ===== Waves ===== */
+    .waves {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 200px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wave {
+      position: absolute;
+      bottom: 0; left: -50%;
+      width: 200%; height: 100%;
+      background-repeat: repeat-x;
+      background-size: 50% 100%;
+    }
+    .wave--1 {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z' fill='rgba(78,205,196,0.12)'/%3E%3C/svg%3E");
+      animation: wave-drift 8s linear infinite;
+    }
+    .wave--2 {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,80 C150,20 350,100 600,50 C850,0 1050,100 1200,80 L1200,120 L0,120 Z' fill='rgba(78,205,196,0.08)'/%3E%3C/svg%3E");
+      animation: wave-drift 12s linear infinite reverse;
+      bottom: -10px;
+    }
+    .wave--3 {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,40 C300,100 500,20 700,70 C900,120 1100,30 1200,40 L1200,120 L0,120 Z' fill='rgba(78,205,196,0.05)'/%3E%3C/svg%3E");
+      animation: wave-drift 16s linear infinite;
+      bottom: -20px;
+    }
+    @keyframes wave-drift {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(50%); }
+    }
+
+    /* ===== Welcome Screen ===== */
+    .welcome-content {
+      text-align: center;
+      padding: 0 40px;
+      z-index: 1;
+    }
+    .welcome-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2.6rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .welcome-subtitle {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: var(--teal);
+      margin-bottom: 28px;
+      font-weight: 500;
+    }
+    .welcome-desc {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--white70);
+      margin-bottom: 44px;
+      max-width: 320px;
+    }
+
+    /* ===== Buttons ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 15px 40px;
+      border: none;
+      border-radius: 50px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn--primary {
+      background: var(--teal);
+      color: var(--navy);
+      box-shadow: 0 4px 24px rgba(78,205,196,0.25);
+    }
+    .btn--secondary {
+      background: var(--white15);
+      color: var(--white);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      font-weight: 500;
+      font-size: 0.85rem;
+      padding: 10px 24px;
+    }
+
+    /* ===== Loading ===== */
+    .spinner {
+      width: 44px; height: 44px;
+      border: 2.5px solid var(--white15);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      color: var(--white70);
+      font-size: 0.9rem;
+      font-weight: 400;
+    }
+
+    /* ===== Result Screen ===== */
+    .result-screen {
+      justify-content: flex-start;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Compass Bar */
+    .compass-bar {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      padding: calc(var(--safe-top) + 12px) 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(180deg, var(--deep) 0%, rgba(7,15,27,0.95) 60%, transparent 100%);
+      z-index: 10;
+    }
+    .compass-icon {
+      width: 24px; height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+    }
+    .compass-icon svg { width: 100%; height: 100%; }
+    .heading-deg {
+      font-size: 1.15rem;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+    }
+    .heading-cardinal {
+      font-size: 0.8rem;
+      color: var(--teal);
+      font-weight: 600;
+      min-width: 30px;
+    }
+
+    /* Computing Badge */
+    .computing-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin: 4px auto 0;
+      background: rgba(78,205,196,0.12);
+      color: var(--teal);
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 3px 12px;
+      border-radius: 20px;
+    }
+    .computing-badge.visible { display: inline-flex; }
+    .computing-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Hero Photo */
+    .hero-photo {
+      width: calc(100% - 32px);
+      max-width: 420px;
+      aspect-ratio: 16 / 10;
+      margin: 16px auto 0;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      background: var(--glass);
+      border: 1px solid var(--white08);
+    }
+    .hero-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.5s ease;
+    }
+    .hero-photo--loading img { opacity: 0; }
+    .hero-photo--loaded img { opacity: 1; }
+    .hero-photo__placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      opacity: 0.15;
+      transition: opacity 0.5s ease;
+    }
+    .hero-photo--loaded .hero-photo__placeholder { opacity: 0; }
+    .hero-photo__credit {
+      position: absolute;
+      bottom: 8px; right: 10px;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Destination Info */
+    .dest-info {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px 24px 0;
+      text-align: center;
+      z-index: 1;
+    }
+    .dest-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: var(--white40);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .dest-inland-note {
+      display: none;
+      font-size: 0.75rem;
+      color: var(--coral);
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.25);
+      border-radius: 20px;
+      padding: 6px 16px;
+      margin: 0 auto 12px;
+      max-width: fit-content;
+      letter-spacing: 0.02em;
+      font-weight: 500;
+    }
+    .dest--faded {
+      opacity: 0.4;
+      transition: opacity 0.3s ease;
+    }
+    .dest-name {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 2rem;
+      font-weight: 400;
+      margin-bottom: 4px;
+      transition: opacity 0.3s ease;
+      line-height: 1.2;
+    }
+    .dest-country {
+      font-size: 0.9rem;
+      color: var(--white70);
+      margin-bottom: 12px;
+      font-weight: 400;
+    }
+    .dest-distance {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      color: var(--teal);
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .dest-distance svg {
+      width: 16px; height: 16px;
+      stroke: var(--teal);
+      fill: none;
+    }
+
+    .dest--faded .dest-name,
+    .dest--faded .dest-country,
+    .dest--faded .dest-distance { opacity: 0.3; }
+
+    /* Description */
+    .dest-description {
+      width: calc(100% - 32px);
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 0 8px;
+      text-align: left;
+      z-index: 1;
+    }
+    .dest-extract {
+      font-size: 0.85rem;
+      line-height: 1.65;
+      color: var(--white70);
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Fun Facts Grid */
+    .facts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      margin: 16px auto;
+      z-index: 1;
+    }
+    .fact-card {
+      background: var(--glass);
+      border: 1px solid var(--white08);
+      border-radius: 14px;
+      padding: 14px 16px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: opacity 0.3s ease;
+    }
+    .fact-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--white40);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .fact-value {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--white);
+    }
+    .fact-value--small {
+      font-size: 0.85rem;
+    }
+
+    /* Ocean Badge */
+    .ocean-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 auto 16px;
+      padding: 6px 16px;
+      background: rgba(78,205,196,0.08);
+      border: 1px solid rgba(78,205,196,0.15);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: var(--teal);
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+    .ocean-badge svg {
+      width: 14px; height: 14px;
+      fill: var(--teal);
+      opacity: 0.7;
+    }
+
+    /* Route Map */
+    .route-map-container {
+      width: calc(100% - 32px);
+      max-width: 420px;
+      height: 200px;
+      margin: 12px auto 0;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--white08);
+      position: relative;
+      z-index: 1;
+      background: var(--glass);
+    }
+    .route-map-container[hidden] { display: none; }
+    #route-map {
+      width: 100%;
+      height: 100%;
+    }
+    /* Override Leaflet controls to match dark theme */
+    .leaflet-control-attribution {
+      background: rgba(0,0,0,0.5) !important;
+      color: rgba(255,255,255,0.4) !important;
+      font-size: 0.55rem !important;
+      padding: 1px 5px !important;
+    }
+    .leaflet-control-attribution a {
+      color: rgba(78,205,196,0.6) !important;
+    }
+    .leaflet-control-zoom a {
+      background: rgba(10,22,40,0.85) !important;
+      color: var(--teal) !important;
+      border-color: var(--white08) !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: rgba(10,22,40,0.95) !important;
+    }
+
+    /* Manual Heading Slider */
+    .manual-heading {
+      width: calc(100% - 32px);
+      max-width: 420px;
+      margin: 8px auto 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--glass);
+      border: 1px solid var(--white08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 12px 16px;
+      border-radius: 14px;
+      z-index: 3;
+    }
+    .manual-heading label {
+      font-size: 0.75rem;
+      color: var(--white40);
+      white-space: nowrap;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .manual-heading input[type="range"] {
+      flex: 1;
+      accent-color: var(--teal);
+      height: 4px;
+    }
+
+    /* Bottom spacer */
+    .bottom-spacer {
+      height: calc(var(--safe-bottom) + 20px);
+      flex-shrink: 0;
+    }
+
+    /* Error Screen */
+    .error-content {
+      text-align: center;
+      padding: 0 40px;
+      z-index: 1;
+    }
+    .error-content p {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--white70);
+      margin-bottom: 30px;
+    }
+    .error-icon {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    /* Animations */
+    @keyframes fade-in-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: fade-in-up 0.5s ease forwards;
+    }
+    .animate-in-delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .animate-in-delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .animate-in-delay-3 { animation-delay: 0.3s; opacity: 0; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Welcome Screen -->
+    <div id="screen-welcome" class="screen">
+      <div class="welcome-content">
+        <h1 class="welcome-title">Beyond<br>the Sea</h1>
+        <p class="welcome-subtitle">Explore what lies across the water</p>
+        <p class="welcome-desc">Face the ocean and discover the lands, cities, and stories waiting on the other side.</p>
+        <button id="btn-start" class="btn btn--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
+          Begin
+        </button>
+      </div>
+      <div class="waves">
+        <div class="wave wave--1"></div>
+        <div class="wave wave--2"></div>
+        <div class="wave wave--3"></div>
+      </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="screen-loading" class="screen" hidden>
+      <div class="spinner"></div>
+      <p id="loading-message" class="loading-text">Getting your location...</p>
+      <div class="waves">
+        <div class="wave wave--1"></div>
+        <div class="wave wave--2"></div>
+        <div class="wave wave--3"></div>
+      </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="screen-result" class="screen result-screen" hidden>
+      <div class="compass-bar">
+        <div id="compass-icon" class="compass-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12,2 15,14 12,11 9,14" fill="#4ecdc4" stroke="#4ecdc4"/>
+            <polygon points="12,22 9,14 12,17 15,14" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.3)"/>
+          </svg>
+        </div>
+        <span id="heading-display" class="heading-deg">---&deg;</span>
+        <span id="heading-cardinal" class="heading-cardinal">--</span>
+      </div>
+
+      <div id="computing-badge" class="computing-badge">
+        <span class="computing-dot"></span>
+        <span>Searching across the water...</span>
+      </div>
+
+      <!-- Hero Photo -->
+      <div id="hero-photo" class="hero-photo hero-photo--loading">
+        <div class="hero-photo__placeholder">&#x1F30A;</div>
+        <img id="hero-img" src="" alt="" crossorigin="anonymous">
+        <span id="hero-credit" class="hero-photo__credit"></span>
+      </div>
+
+      <!-- Route Map -->
+      <div id="route-map-container" class="route-map-container" hidden>
+        <div id="route-map"></div>
+      </div>
+
+      <!-- Destination Info -->
+      <div id="dest-info" class="dest-info">
+        <p class="dest-label">Across the water</p>
+        <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
+        <h2 id="dest-name" class="dest-name">Searching...</h2>
+        <p id="dest-country" class="dest-country"></p>
+        <p id="dest-distance" class="dest-distance"></p>
+      </div>
+
+      <!-- Ocean Badge -->
+      <div id="ocean-badge" class="ocean-badge" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M2,12 C4,8 6,16 8,12 C10,8 12,16 14,12 C16,8 18,16 20,12 C22,8 24,12 24,12"/></svg>
+        <span id="ocean-name">Pacific Ocean</span>
+      </div>
+
+      <!-- Description -->
+      <div id="dest-description" class="dest-description" style="display:none">
+        <p id="dest-extract" class="dest-extract"></p>
+      </div>
+
+      <!-- Fun Facts Grid -->
+      <div id="facts-grid" class="facts-grid" style="display:none">
+        <div class="fact-card" id="fact-population">
+          <div class="fact-label">Population</div>
+          <div class="fact-value" id="fact-pop-value">--</div>
+        </div>
+        <div class="fact-card" id="fact-timezone">
+          <div class="fact-label">Local Time</div>
+          <div class="fact-value fact-value--small" id="fact-tz-value">--</div>
+        </div>
+        <div class="fact-card" id="fact-region">
+          <div class="fact-label">Region</div>
+          <div class="fact-value fact-value--small" id="fact-region-value">--</div>
+        </div>
+        <div class="fact-card" id="fact-continent">
+          <div class="fact-label">Continent</div>
+          <div class="fact-value fact-value--small" id="fact-continent-value">--</div>
+        </div>
+      </div>
+
+      <!-- Manual Heading (desktop fallback) -->
+      <div id="manual-heading" class="manual-heading" hidden>
+        <label for="heading-slider">Heading</label>
+        <input type="range" id="heading-slider" min="0" max="359" value="270" step="1">
+      </div>
+
+      <div class="bottom-spacer"></div>
+
+      <div class="waves">
+        <div class="wave wave--1"></div>
+        <div class="wave wave--2"></div>
+        <div class="wave wave--3"></div>
+      </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="screen-error" class="screen" hidden>
+      <div class="error-content">
+        <div class="error-icon">&#x26A0;</div>
+        <p id="error-message">Something went wrong.</p>
+        <button id="btn-retry" class="btn btn--primary">Try Again</button>
+      </div>
+      <div class="waves">
+        <div class="wave wave--1"></div>
+        <div class="wave wave--2"></div>
+        <div class="wave wave--3"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ===== Configuration =====
+    const CONFIG = {
+      GEONAMES_USERNAME: 'evanrapoport',
+      GEONAMES_BASE: 'https://secure.geonames.org',
+      WIKIPEDIA_API: 'https://en.wikipedia.org/w/api.php',
+      RAY_STEP_KM: 25,
+      RAY_MAX_KM: 25000,
+      HEADING_DEBOUNCE_MS: 500,
+      HEADING_BUCKET_DEG: 5,
+      CACHE_TTL_MS: 300000,
+      EARTH_RADIUS_KM: 6371,
+      REQUEST_MIN_INTERVAL_MS: 100,
+    };
+
+    const CONTINENT_NAMES = {
+      AF: 'Africa', AN: 'Antarctica', AS: 'Asia',
+      EU: 'Europe', NA: 'North America', OC: 'Oceania', SA: 'South America',
+    };
+
+    // ===== Land/Water Bitmap =====
+    const LAND_BITMAP_RLE_B64 = "AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wDtPgF/Af8BwAEArQcBhwH/BgCbwAEfAb8BwAEACgEB/wr4AQCXAQH/Bv0B/wHAAQAHAwH/C/wBAJUBAf8J8AEABz8B/wzAAQCTfwHDAf8K4AEAAj8BHAEPAf8BHwH7Af8LAJIHAecB/wzAAQ8B/wLfAccB/wH+AX8B/wj4AQABBwHgAXABAI8fAf8N+AEfAf8D3wH/Df4BPwHwATwBAAH/AYABACP8AQBofwH/DOABAAEfAf8T8QHwAQ8B/wKAAQAhBwGAAQABfgEAZAEB/AEHAf8M+AEAAR8B/xPPAf8E4AEAIAMB/wHYAQBmCwH/AYAB/wyBAd8B/xj8AQAfcAEAAT8BbwHgAX4BAAH8AQALAQH8AQMB/wHgAQBTPwH/AfABHwH/BMcB/wXgAR8B/xj+AQAeHwHHAfgBAAH/AvMB/wG/AfwBAAYPAcABAAU/Af8CAFIBAf8DAQH3Af8B5wH8Af8F/AEHAf8Z4AEAHQ8B/wHvAf4BAQHDAfgBBwH/AYwBAA4/Af8CAFIDAf8D9wHDAcABDwH/BuABHwH/GQAR7wHgAXkB8AEACv8B/gEAAT4BzAH/AfsBOAEADgMB/wL8AQBQAQH4AQcB/wT3Af8H/AEAAR8B/xfHAfgBABBAAf8E+AEAAQEB/gEABh8B8wG4AX4BAQH/AZ8BAA8HAf8DMAEATwEB+AEHAf8E8wH/B/ABAAIPAf8WHwHgAQANFwFfASEB/wF/Af8D+AEAC3wBAAMOAQAPDwH+Af8DAFL/C+MBgAEAAh8B/xbgAQAOHwH+AfkB/wHhAf8DwAEAGPwBAAf/BIABAEw/AfABAAN/Af8E9wH/BP4BAAQ/Af8W8AEADh8B/wPwAT8B/wH+AQAhAwH/Av4BAwH4AQBLfwH9AcABAAP/BOMB/wT8AQACAwH/GPABAA4PAf8E4AEDAYABACI/Af8CDwH/AQBLDwH/Af4BAQHAAQEB/wP3Af8F+AEAAn8B/xiAAQAOPwH/BPwBAAJgAfwBACEfAf8BPwH/AfgBAEYBAf8B4AEAAQ4BfwH/AcMB/gEAAX8B/wLfAf8F/AEBAf8Z8AEADx0B/wWAAQABMAEAJH8B/wH8AQBGHwH/AeABAAEPAf8CwwH/AfgBDwH/AfwBPwH/BeABBwH/GfABOAEADg8BvwHjAf8B/AF/AYABACUBAf8C+AFgAQBEBgEAAf8BwAEAAhgBPwHwAX8B8AEAAX4BWAE/Af8FwAEHAf8Z4AE4AQAPAwH/AvABHwH8AQAlBwH/AbABAAG+AQBEDwHfAf8BgAEAAgMB9wHwAR8BwAEAA/4BPwH/A/wBAAEBAf8Z3wGQAcABAA4DAf8CwAEHAf8B4AEAbAYBAAEfAf8BAALwAQEBwAEAAQEB/wHwAR8BAQH/AZ8B/wMAAwcB/xnhAYABAA//AsABHwH/AcABACYfAfwBAEMfAf8BwAEHAfwBAAJ8AQAFgAEfAcABfwH/BAACAwHgAQcB/xjAAQAQ/wH+AQABHAE+AQAgBgEABQEB/wIGAQBC/wIABRwBAAMBAeABAAIHAf8E4AEAAx8B/xn+AQAQPwH8AQAjDgEAAgcB4AEAAQ8B/wH+AcABAEEDAf8CjwHAAQABHAEABQ8B/wHgAQMBvwH/BQADDwH/Gf4BABAHAfgBABh/AfABAA8fAf8C/AEAQT8B/gH/AYABAAL8AQABBwHAAT8B7wEHAf8JAAQ/Af8XwAEcAQARcAEAFwcB/wHwAQANBAEAAQ8B/wLxAf8C4AEAETgBACsHAf8B/AHwAf8BAAEDAf8BAAEDAf0B/wLAAf8D7wH9Af4B/AEPAfgBAAQ/Af8XyAEcAQAnBgEHAf8C4AEADAEBUAEfAf8G4AEAPQ8B/wH4AccB/wH+AQABfwGGAQMB/gH/AsABAAEPAf8B4AEAAw4BOAEABA8B/wF4AQAB/xWMAQAn/wP+AQAMHwH/AdMB/wf8AQAM/AEHAQAFMAEAKQYBGwHPAccB/wLAAf8CwAH/A8ABDgEDAf8B4AEAAscBwAFwAQAJ/xTAAQAmPwH/A4ABAAwfAf8KAAoDAv8B3wH/AYABAC8/AR8B/wMPAf8BwAEHAf8C7wF+AQEB/wHuAfAB/wMACgcB/xPgAQAlAQH/A4ABAAz/C/4BAAoDAYcB/wLfAfwBYAEAL38B/wXHAYABBwH/Aa0B/wHDAf8GwAEACQcB/xPvAYABACQfAf8CgAEACAMBgAEAAj8B/wv+AQAKAwEfAf8D8AH/AcABAC4/Af4B/wSPAcABAwH/AccB/wHBAf8GwAEACQEB/xL4Ac8B4AEAIwEB/wL4AQAMHwH/DPwBAAsPAf8D4AH/AvABAC//AucBOAEABAMB/wHBAf8GwAEACj8B/xKAAQAkAQH/AsABAAz/DeABAAsBAf8B/gH4AQABAwH/AeABACtAAQACAwH/AfgBAAZgAW8BwAF/Af8E/gEACw8B/xLgAQAkAwH/Af4BAAwBAf8M/gGAAQAMHAEALwcB/wIAA38BABsHAf8S4AEAEhgBABEPAf8B4AEADGAB/wzDAfwBADwDAf8D+AEACAMBwAEPAf4BABEfAf8RfgEAJR8B/wHgAQALfAEAAT8B/wsNAfABAAoHAYABAAH4AQAuAQH/BAAHDwH/AfABHwH/Af4BAAEfAfABAA7/Ef4BACQBAf8CAA0DAf8L8wH+ARgBAAVgAQAFgAEAAX8B4AEALQEB/wTgAQADDwH8AQABPwH/AfABfwH/AfwBAwH/AfAB/wHvAf8B4AEACQEB/xH+AQAkAQH/AfwBAAgDAcABAAE/Af8NgAH/Af0B/wLwAQABBwH8AQgBAAY/AfwBAC0HAf8FAAIBAccB/AEAAT8B/wHgAX8B/wHwAQ8B/wHfAf8D+AEACn8B/xDgAQAkAQH/AfgBAAb+AQABBgFgAQABfwH/DPABfwH/BMABAAEHAf8CgAEABAEB/wH8AQAtDwH/BQACAQH/AfgBAwGDAf8BHAF/Af8B4AEfAf8BPwH/Af0B/wH+AQAKfwH/D/wBACUPAf8BwAEABQEB/gEAAfABAAEMAX8B/xOAAQcB/wL4AQA0DwH/BT8BxwHhAf8B8AEHAeMB/wH8AX8B/wGAAT8B/AF/Af8B/gH/AgAKPwH/EAAlPwH/AYABAAUPAf8BwAF8AQABPAEfAf8X+AEABTwBAC4fAf8C+wH/A+cB+AH/AeABBwH/Av4BPwHAAQABfwH+AX8B/wH+AQMB/wHAAQAIAQH/EQAlPwH+AQAGHwH/AfABHgEHAcABPwH/F/gBAAUfAf8B/AEALD8B/wLjAf8E/AH/AfABAAH/AvwBHwHAAQAB/wH+AT8B/wH9AfcB/wHwAQAJfwH/EAAlPwH8AQAGHwH/AeABDgEfAf4BHwH/F/wBAAQPAf8E4AEAKn8B/wIPAf8E/gF/AfgBAAEPAf8B/AEfAYABAAH/Af4BfwH/BP4BAAl/Af8P9gEAJAMB/wH8AQAGPwH/AeABPgEHAf8B8AF/Af8W/AEABA8B/wUAKh8B/wH+AQ8B/wT+AT8B/AEAAQEB/wH8AT4BAAL/B/4BAAk/Af8P/gEAJAcB/wH8AQAGfwH/AcMB+AH/AvwBPwH/FvwBAAFgAQACBwH/Av4B/wIAD/4BABoBAf8B/gEPAf8G/gEAAn8B8AH/AcABAAH/CN8BgAEAB38BvwH/DwAkAwH/Af4BAAUBAf8ChwH8Af8D+wH/FvgBAAH8AQcBzwHzAf8FAA//AcABAAkMAQAQfwH4AQEB/wb+AQACPwEDAf8B8AEAAX8B/wH3Af8G8AEABz8BHwH/D8ABACR3Af8BgAEABA8B/wKPAf4BHwH/AvcB/xb8AQAB/wn+AQANDwH/AcABAAk/AdgBAA88AQABAQH/BvwBAAMDAf8B+AEAATwB/wj8AQAI7wH/DYMB/wHAAQAFAwEAEAcBgwGAAQALOwH/AeABAAQfAf8C4wH/An8B/wHPAf8XgQH/CoABAwH/AQAKPwFwAQAJbwH/Av4BABADAf8HAAMHAf8B+AEAAT8B/wmAAQAGAwHBAf8MfwHhAf8BwAEABRwBAA8MAX4BZwH4AQALBwH/AfwBAAQ/Af8C4QH/HPcB/w38AWABAAg/AQAJAQH/BIABAAoBAYABAAR/Af8G+AEGAQABAwH/Af4BAAEfAf8J/gEABgMB/wG/Af8M4AH/AcABABX/Af0B7wH/AcABAAs/Af4BAARnAf8C4AF/Af8D+wH/JgATnwH/BoABAAgBAeABAAUPAQEB/wUAAgcB/wKAAQMB/wqAAQAFAwH/Df0B+AE8AYABABX/BPABAA08AQADDwH/AuAB/ysAEgMB/wjjAfgBAAUPAcMB+AEOAQADHwH/B/ABAAEHAf8CwAEAAR8B/wP4AX8B/wTgAQAFDwH/D/4BABQPAfcB/wTAAQANPwGAAQACDwH/AuEB/ysABT4BAAwPAf8KgAEABP8C/AEeAR8BwAEAAR8B/wf4AQEBwQH/AgADPwEPAfsB8AF/Af8E8AEABQ8B/wE7Af8N/AEAFD8B/wXhAeABAAwfAdwBAAIfAf8C4wH/KwADAQH8AX8B/wLAAQAJHwH/C/ABAAEDAQ8B/wL+AT8BHwH8AQABDwH/BvwBeAEHAfAB/wJwAQACPwH+AQcB5wEfAf8EgAEABQ8B/wG/Af8NgAEAEwMB/wfwAQAMAQH/AoABHwH/AuMB/yv3Af8CjwH4Af8D/gEACT8B/wv8AQABfwH/B+ABBwH/BxABBwH+AeEB/wIAAj8B/gEAAQYBPwH/BPwBAAUBAf4BDwH/DP4BABMBAY8B/wjAAQAGfwGAAQAEfwH/AfABCAH/AuEB/y/AAT8B/wPwAQAI/w3AAf8JAAJ/Af8C8wH/AoEBfwH/AQEB/wH8AXwBAAE/Af8B4AEeAToB/wT8AQAHHwH/DPABABMDAZ8B/wnAAQAFfwGAAQAEPwH/AoAB/wLhAfwB/y78AR8B/wTwAQAFAQH/GfgBfwH/Ao8B3wH/AYcBPwH/AecB/wH8AX8BAAEfAf8B4AE4AQcB/wSAAQAHHwH/DMABABM/AccB/wn8AQAFfwEAAR8BgAEBAfwBPwH/AvgBPwH/AfABHwHnAf8z/gEABQMB/xo/Af8B4wH/AfwBAQGAAQEB/wGAAX8B/AH/AYABfwH/AeABAAEGAT8B/wNAAQAGHwG/Af8L/gEAFH8B/wuAAQABBwH8AQADfwEHAf8B/QH/A/4BHwH/Af4BfwH5Af80wAEABAcB/xoAAgcB/wH+AQACBwHyAQEB/wOEAf8B/gEAARgBAwHYAf8D+AEABh8B/wv+AQAVfwH/C/ABAAEBAf8BgAEAAT8B/wEfAf8I/AF/AfkB/zT8AQAEAQH/GfgBAAIjAf8B/gHgAQABBwH/AT8B/wL+AQ4B/wIAARgBDwH3AR8B/wOAAQAFHwH/Cn8BABUPAecB/wwAAn8B4AEBAf8L+AE/AfsB/zWAAQAEHwH/GPwBAAE/AZgB/wL8AQ8BxwG/AX8B/wL+AQ8B/wKAAQABHwH3Ae8B/wP8AQAFfwH/Cf4BABYYAR8B/wzAAQAB/wHgAT8B/wv4AR8B+wH/NeABAAQDAf8b9QH/Bn8B/wODAf8C4AEAAT8B8AEHAf8EgAEABH8B/wn4AQAXHwH/DPABAQH8AQEB/wzwAX8B/zb4AQAF/ybvAf8C4AEAAR8B8AEDAf8E8AEABP8K4AEAF38B/wz4AQEB+AEBAf8MwAH/N/sB+AEABH8B/xu/Af8M4AEAAwcB/wT9AQAE/wrAAQAX/w38AQEB/gEDAf8MgQH/N/kB/wHAAQADBwH/KIABAAMPAf8FwAEAA38B/wmAAQAWAwH/DfgBIAF/Af8M/gEHAf83/QH/AfABAAIHAYEB/yf+AQAEPwH/BeABAAM/Af8JABcPAf8J+QH/A/ABIAF/Af8M/gF/Af85/gEAAv8BgAH/Jf4BPwHwAQADAQH/A/cB/wLAAQADfwH/CPwBAAUfAQACAwHcAQANDwH/Cf4BBwH/AsEB/gH/Df4B/zbvAf8EgAEHAf8oBwEQAQADAwH/A/EB/wIABH8B/wjAAQAFfwHDAT8B/wH4AQANfwH/CsABBwH+AQ8B/0XPAf8D/gEAAT8B/yj9AcABAAMBAf8D4AE/Af4BAAQfAf8IAAZ/AeMB/wL8AQANfwH/CuABAAJ/Af9F4wH/A/wBAQH/J+8B/QH8AeABAAR/Af8C4AE/AfwBAAQfAf8G/gHwAQAFAwH/Ae8B/wPAAQALAQF/Af8EgAE/Af8E4AEAAQEB/0bgAQEB/wH+AQACfwH/J/EB/wEAAz8B3wH/A/ABHwHgAQAEAwH/BsABAAYBAcMB/wTAAQAM/wUAAQcB/wTgAQABAQH/RsABAAH/Af4BAAIPAf8n8QH/AeABAAL/BfgBBwHgAQAEAwH/BoABAAcLAf8EwAEACwEB/wT+AQABNwH/BOMBHgEBAf9GAAJ/Af4BAAIHAf8n8QH/AfwBAAEBAf8GwAFAAQAEAQH/BfwBAAj/BYABAAsfAf8E/AEAAT8B/wTwAT8BwAF/Af9E/gEAAgMB/AEAAgMB/wIPAf8k4wH/AoABAQH/BuABAAUBAf8F/gEACAMB/wP+AQAMHwH/BPwBAAF/Af8E8AEfAf9F/QHwAQAD/gEAAwgBHAE/Af8kgwH/AoABAAH/AYEBPwH/A/ABAAUBAf8F/gEACf8D/AEADH8B/wT8AQEB/wYPAf9F/gHAAQAJDwH/JAMB/wL4AQADHwH/A/ABAAZ/Af8E/AEACAUB/wPAAQAM/wX4AQMB/wbAAf9GwAEACQ8B/yOAAR8B/wHHAf4BAAHAAQABBwH/A/wBAAY/Af8E/AEACAcB/wL+AQAMAwH3Af8E8AEPAf9N4AEABP8BAAQfAf8jAAEfAf8BgwH+AQABGAEAAn8B+wH/Af4BAAY/Af8E/AEACQMB/wGAAQAMfwH/BcABPwH/TeABAAT/AfgBAAIHAf8j+AEAAn4BAAIDAdwBAAL/Af4BvwH8AQAGHwH/BPABAAo+AQAMAQH/BfwBAAF/Af9N8AEABAEB+AEAAQMB/yT8AQACOAEAAgEBwAEAAn8B/wGPAfgBAAYPAf8E8AEAFwcB/wXwAQ8B/078AQAHDwH/JPgBAAM/AYABAAQfAf8B8AH4AQAGAwH/BMABABcfAf8FwAEPAf9O/gEABw8B/ySAAQADfwEAAjABBwEAAQ4BPwH8ARwBAAYBAf8EABh/Af8FAAEPAf9N9wH+AQAHPwH/I/wBAAT8AQEB4QH/AaMB4AEAAR8B/gEOAQAGAQH/A/4BABEcAQAFAwH/Bf4BAAEPAf9G/AF/Af8F4AE4AQAHfwH/I/wBAARQAQEB4QH/AvwBAAEBAf8BAAh/Af8DABE+AQAFDwH/Bf4BAAEHAf9G+AH/Bf4BAAgBAf8k8AEABQEB4QH/AwACBwEYAQAHPwH/AwARDAEABR8B/wX8AQABBwH/RvgB/wXwAQAIAQH/JOABAAbAAf8DwAEAAjwBAAcfAf8C/gEAEQgBAAUfAf8F/AEAAQMB/0P4AQAB/wH5Af8FAAr/JIABAAd/Af8CwAEAAhgBAAcPAf8C/gEAEQQBAAUPAf8F+AEAAQMB/0PgAQEB/wEBAf8E+AEACn8B/wb4Af8cAAj/BEABAAkDAf8C/AEAFx8B/wX4AQABBwH/Q8ABAQH8AQMB/wTgAQAKHwH/Bt8B/wHnAf8Z/gEABwMB/wTgAQAJAQH/AvwBABQIAQACDwH/BfgBAAEHAf9DAAEBAXABDwH/BIABAAYYAQADPwH/Br8B/wEBAf8Z/gEACH8B/wPBAYABAAkDAf8B+AEAFDgBAAIPAf8GAAEHAf9C/gEAAsABfwH/A/wBAAcOAQACBwHfAf8GvwH/AdcBfwH/GPwBAAh/Af8DgwGAAQ4BAAk/AfABABRwAQACHwH/BsEBgQH/AuABPwH/PvgBAAIBAf8C/gEDAeABAAo/AccB/QH/BPwBfwH/AfABBwH/GPwBAAg/Af8DwAEAAR4BAAk/AfABABQwAQACDwH/BvMB4gH/AfgBAAEPAf8+4AEAAgMB/wH8AfABAQHAAQAKDwHBAfkB/wT4Af8BzAHgAQYBAAE/Af8W+AEABgEBgAE/Af8DwAEAAT8BAAkDAeABABQgAQACDwH/BvABAAEMAQACfwH/PsABAAIPAf4BuAHAAQAP/wTwAX8BAAX/FvgBAAYDAQABfwH/A8ABAAE/AYABACEPAf8G8AEAAgMB4AH/PPkB/wKAAQACPwH8AQAR/wSAAfwBAAV/Af8V+AEACP8E4AEAAX8BwAEAHQ4BAAMPAf8G4AEAAv8+8AEDAf8B+AEAAv8B+AEAEf8EwAFAAQAFBwH/FfgBAAcBAf8E8AEAAX8B4AEAHTgBAAMNAf8C3wH/A8ABAAEjAf87wAEBAYABAAEvAf0B+AEAAQEB/wH5AeABABB9Af8D4AEABgEB/xX8AQAHAwH/BP4BAQH/AfgBAB04AQADAwH/Af4BDwH/Av4BAAJzAf87AAQHAbABAAIDAf8B8QHgAQAQ+AE7Ab8B/wHGAQAHfwH/FfABAAYDAf8E/gEHAf8B+AEAHB0B8AEAAwMB/wH4AQcB/wL4AQACfwH/Ov4BAAgHAf8BxwEAEhgBPwH/AQ8BAAcfAf8V8AEABgEB/wf8AQAbBwEfAfABAAMBAf8B4AEHAf8C8AEAAQEB/zv4AQAIHwH/AYABABN/Af4BPwEABwMB/xX4AQAHPwH/Bv4BABseAT8BwAEABD8BgAEHAf8C4AEAAsABfwH/OeABAAh/Af8BABR/AfAB/gEABwcB/xX4AQAHHwH/B4ABABocAX8BgAEABgMB/wLgATwBAAGAAX8B/zngAQAHHwH/AvgBABN/AccB/gEABwEB/xX8AQAGgAEPAf8HgAEAGjcBfwH/AYABAAQBAeEB/wLgAfABAwHgAX8B/zmAAQAHHwH/AvgBABIDAf8BBwH8AQAI/wG/Af8T/gEABoABBwH/B8ABABonAf8CgAEABAMB2QH/AugB8AEHAfgBfwH/OP4BAAgfAf8C8AEADAMBAAUHAf4BBwHwAQAI/xX9Af8BAAYHAf8H4AEAGiMB/wIABT8BwAH/AtgB4AEHAfwB/zn4AQAIPwH/AvABABIfAfgBAwHAAQAIPwH/FvgBAASAAQMB/wfgAQAb/wIABXcBwAF/Af8B8AHAAQ8B/zrgAQAI/wPwAQANQAEABP8BwAEHAQAJHwH/Fv4BAARQAQMB/wfgAQAaBQH/Af4BAAX/AcABPwH/AeABAAEPAf86wAEABwEB/wP4AQARAwH+AQABBAEACQ0B/xeAAQACAQH8AQcB/wfAAQAaAQG/AfwBAAX/AfABPwH/AeABAAEPAf86gAEABwEB/wP8AQARAwH+AQALAQH/F8ABAAIBAfgBBwH/B/ABABv/AfgBAAX/AeAB/wIAAg8B/zn+AQAIAQH/A/wBABH/AfgBAAFAAQAKfwH/Fv4BAAPwAQ8B/wf+AQAaAwH/AgAF/wGnAf8BwAEAAg8B/zn8AQAIAwH/AwARAwH/AUABAAx/Af8XwAEAAz8B/wf+AQAaAwF/Af8BwAEABP8B7wH/AcABAAIPAf858AEACAMB/wMAEQ8BvgEADX8B/xfhAYABAAJ/Af8H/gGAAQAZMAFfAf8BwAEABD8B/wHfAYABAAIfAf85wAEACAMB/wL+AQABAQGAAQAO/wENAeABAAw/Ae8B/xf+AQABAwH/CfgBABgDAf8BDwH/AeABAAQ/AfcBwAE4AQACNwH/OR8BgAEABwMB/wMAAQEBwAEADQcB8gEADh8BLwH/F/4BAAEfAf8KgAEAFwMB/wGfAf8B4AEABH8B/wHAAQABAwHBAf85+AEfAYABAAcDAf8DgAEAAeIBAA0PAfABAA4MAQsB/xf+AQABfwH/CuABABcHAf8BwAF/AfgBAAR/AQYBDgEAAT8B4QH/OvMBAAgDAf8DAAIjAYABAAwOAQwBAA8DAf8X/gEAAT8B/wrAAQAXZwH/AcYBfwH+AQAEPwH4AX4BAAH/PPABMAEAATABAAUBAf8C4AEADwEB4AEADx4BxwH/F/4BAAEfAf8K4AEAFgEB/wKGAR8B/wEABB8B8wH/AR8B/zzuAR8BgAFwAQAFAQH/AoABAA8fAQAQHwGHAf8YAAEfAf8K8AEAFgEB/wH+AQABDwH/AQAEPwH/P/4BfwHAATABAAUBAf8CAA8BAZ4BABAPAYMB/xgAAR8B/wl/Af8BABYBAf8CAAEfAf8BAAMfAf9C8AE4AQAG/wIADwMB+AEAEAcBgwH/GAABjwH/C4ABABUBAf8CBwH/AoABAAELAf9D/QH4AQAG/wIADw4BABEHAcABvwH/Fv4B+AEPAf8LgAEAFj8B/wEDAf8CwAEAARcB/0P9AfwBAAb/Af0BAA+YAQARAQHAAR8B/xf4AQ8B/wuAAQAWPwH/AQcB/wL+AQABPwH/Q/kB/AEABv8B8AEABjwBAAcMAQATwAEfAf8XgAEHAf8LgAEAFn8B/wEBAf8C/gEAAT8B/0P5AfwBAAb/AcABAAwDAQYBABRgAQcB/xfAAQcB/wuAAQAW/wH+AQEB/wL+AQABPwH/RPgBAAZ/AcABAAYCAQAEAQEfAeABABQwAQMB/xfwAScB/wvAAQAVAwH/Af4BDwH/Av4BAAH/RfgBAAZ/AcABAAgCAQABAQGeAQAXAQH/F/wBLwH/CyABABUDAf8BgAEfAf8C+AEAAf9F+AEABj8BgAEACAYBIgEAAfwBABcBAf8X/AEvAf8K/QHgAQAVAQH8AQABHwH/AvABBwH/RPkB/AEABj8BAAo4AQAa/xh/Af8K1wHAAQAZfwH/AfwBDwH/RPAB/AEABjwBAAoMAQAafwH/IfwBDwGAAQAYAQH/AvwBfwH/ROAB/gEABjgBACQDAf8i+AEfAcABABgHAf8C8wH/ReAB/gEABQIBQAEAJAMB+wH/IeABPwEAGQ8B9wEwAQMB/0XAAf4BAAUBAcABACX/IsABfgEAGR8BwAEAAQMB/0XAAf8BAAUHAYABACX/Hv0BAAL4AQABfwEAGXgBAAIHAf9F4AH/AQAFBwEAJh8B9wH/HPABAwHwAQAC/wHAAQAbfwH/RcAB/wGAAQArDwH/HfABAQH+AQAC/wGNAQAa4AH/RsAB/wGAAQAEEAEAJgcB/wF/Af8b4AEAAX8BgAEBAf8CwAEAGAQBfwH/RsAB/wGAAQAEMAEAJ38B3wH/Gv4BDwH8AQ8BgAEDAf8CwAEAGAEBfwH/RsAB+AHAAQAsfwHnAf8a/AF/Af4BAAIHAf8CgAEAGDABfwH/RsEB8AFgAQAEgAEAJw8B+wH/GvMB/wH+AQACHwH/ArABABcHAf9IgQHwASABACwHAe8B/xrvAf8B/gEAAgcB/wLwAQAXBwH/SIAB4AEALQcB/x34AQACHwH/AtgBABcHAf9IAAHgAQAtBwH/HZwBAAI/Af8C8AEAFwMB/0f8AQAB4AEALQMB/x34AQABYAE/Af8C/AEAGD8B/0b4AQAB4AEALQMB/x34AQABgAEAAj4B/AEAGAMB/0b4AQAB8AEALQEB/x34AQADAgHxAfgBABgBAf8U9wH/MeABAAH4AQAEgAEAKAEB/x37AQABDgEAAQMB4QH4AQAYAQH/E/wBfwH/BeEB/yvAAQEB/AEAAwEBgAEAKAEB/x7AAR4BAANwAQAZ/xPBAf8GgAEPAf8qwAEBAf4BAC0BAf8d/QH/AR4BAB1/Af8P4wH/AfwBAQH/BfwBAAEPAf8qgAEBAcYBAC7/HuwBPwGAAQAcPwH/D+EB/wH4AQAB/wX4AQABDwH/KoABAQGEAQAD4AEAKv8e4QG/AYABABw/Af8PwAEHAfABAQH/BeABAAEfAf8qAAKAAQACAwGAAQAq/x/+AQAdHwH/BvsB/wf+AQABHwH4AQMB/wUAAh8B/yn8AQAFAgEAK/8d7wH/AfABAB0fAf8GwwH/B/4BAAE/Af8G/AEAAQcB/yr4AQABCwGAAQABAQFwAQAr/x0fAf8B4AEAHR8B/wbDAf8H/gEAAQ8B/wb8AQABzwH/KvABAAEPAcABAAEDAYABACoBAf8c+AF/Af8BAB4fAf8GwQH/B/4BAAEDAfwBBwH/BPgBAAEPAf8q4AEAAQEB4AEAAQ4BACsBAf8c+QH/AfABAB4fAf8GgAFfAf8G8AEAAQMBwAEDAf8E8AEAAXcB/yrAAQABAQH4AQABHAEAKwEB/xwDAf4BAB8/Af8GwAEPAf8G8AEAAQMBgAEAAf8E+AEAAX8B/yqAAQABAwH8AQUB0AEAKwEB/xvwAQEB/gEAHz8B/wTDAf8B4AEPAf8G4AEABB8B/wP8AQABHwH/Kf4BAAIDAf8BnQGAAQArAQH/G+ABAQH4AQACgAEAHD8B/wSAAf8B+AEPAf8G4AEABAcB/wP8AQABHwH/KfwBAAIDAf8B/gEwAQArAQH/GwAC4AEAGwEB/wHgAQABPwH/A/wBAAF/Af4BAQH/BuABAAQDAf8D/gEAAQ8B/yn8AQACBwH/AfoBQAEAKwMB/xr+AQAeDwH/Bf4BfwHwAQABfwH+AQABfwH/BcABAAQBAf8D/AEAAQcB/ynwAQACZwH/AgAsAwH/GvwBAB4fAf8F+AEDAeABAAE/Af8BAAF/Af8FAAZ/Af8C/AEAAQcB/ynAAQACfwH/Af4BACwDAf8a+AEAHh8B/wX4AQACBAH/AgABPwH/BQAGDwH/Av4BAAEBAf8n/AF/AQADfwH/AeABACwDAf8a/AEAHg8B/wX4AQACHAEPAf8BgAEAAf8E/gEABgcB/wMAAj8B/yb4AQgBAAIBAf8B/gEALQMB/xr4AQAeDwH/BfwBAAI+AQ8B/wHAAQABPwH/A/4BAAYDAf8DgAEAAT8B/ybwAQADAQHYAfwBAC0DAf8a/QEAHg8B/wX4AQACPgEDAf8B8AEAAR8B/wQAAxgBAAIDAf8DwAEAAT8B/ybAAQADBwHwATwBAC0BAf8a/QGAAQAdDwH/BfgBAAI8AQAB/wKAAQ8B/wQAAj8B+AEAAgEB/wPgAQABMQH/JgAF+AEALgEB/xuAAQAdDwH/BfABAAIcAQABfwH/AYABAwH/BIABAAH/AoABAAEDAf8D8AEAATAB/yX+AQAFwAEALgEB/xrlAQAeBwH/BcABAAIIAQABPwH/AcABBwH/BPABBwH/AvABAAEPAf8D+AEAATAB/yX+AQAFnAEALgEB/xnyAYABAB4HAf8E/gEAAx4BAAEBAf8B+AEDAf8JDgE/Af8D+AEAAj8B/yT+AQAFfAEALgEB/xoAHwcB/wTwAQAD/gEAAv8B/gEHAf8D/AEPAf8J/AEAAR4BfwH/JP4BAAV8AQAuAwH/GfABAB8HAf8E8AEAA/8BAAEBAX8B/wGHAf8CIAH4AR8B/wqAAR8B/yHwAf8D/AEABAEB/AEALgMB/xkAIA8B/wTAAQADfgEAAh8B9wHHAf8CggF/Af8LwAEfAf8h4AH/A/ABAAQBAf8BAC4BAf8ZACAPAf8EgAEBAYABAAF+AQACDwHhAcMB/wHnAUMBfwH/Cv4BAAEfAf8hwQH/A+ABAAQBAf8BAC//GQAgDwH/BAABOQHAAQABfgEAAgEB4AHDAf8B8gEMAf8L/AEAARcB/yD+AQMB/wMABQEB/wEAL/8ZACAfAf8EAAF8AQACfgEAAgEB8AEDAf8B8AEAAf8L/AEAAQ8B/yD8AQcB+AE/Af4BAAb/AQAv/xj+AQAVEAEACj8B/wP+AQABGAEAAn4BAAP4AQEBfwH4AQAB/wv8AQABDwH/IPgBBwHAAQcB/gEABv8BAC9/Af8X7AEAID8B/wQGAQADfgEAA/gBAAE/Af4BAQH/C/gBAAELAf8g8AEDAYABBwH/AQAFAQH/AQAvfwH/F/ABABcwAQAIPwH/BIQBAAMwAQAD+AEAAT8B/gEgAR8B/wrwAQABCQH/H/4BAAEOAQABDwH/AYABAAQBAf4BAC8/Af8W/QHwAQAWBwGwAQAIPwH/BIQBAAYBAeABAAE/Af8BgQH/C/ABAAEBAf8f/gEAAw8B/wHAAQAEAwH8AQAvHwH/F/ABABYDAQAJHwH/A/4BAAcDAeABAAFvAf8BgQH/C/ABAAEBAf8gAAMfAf8B4AEABAcB/AEALw8B/xb+AeABACAPAf8D/AEABj4BfwGAAQABZwH/AeEB/wvwAQABAQH/IPABAAI/Af8B4AEABGcB8AEALwcB/xb+AWABABjwAQAHDwH/A/wBAAZ/Af0BgAEAAT8B/wGwATcB/wrwAQABAQH/IPABMAEAAS8B/wHwAQAEXwHwAQAvAwH/Fv4BwAEAIA8B/wP4AQAGPwH4AQACFwH9AdgB/wv8AQABAQH/IPgBfAEAAn8B+AEQAQADPwHwAQAvAwH/Fv4BgAEAIA8B/wPAAQAEAwEAAQcB+AEAAgMB/AFEAQcB/wuAAQEB/yDxAf8B4AEAAT8B/AEQAQACHAF/AfABAC8DAf8W/gGAAQAgDwH/A4ABAANEAR8BmAEDAfwBAAIDAfABTgEXAf8LwAEBAf8i4AEAAR8B/AEAAxEB/wHwAQAw/xeAAQAYEAEACAMB/wKAAQABBwHxAf8C+QEAAXgBAAIDAfgBJQEdAf8L8AEPAf8iwAEAAf8B/AEAAx8B/wHwAQAw/xeAAQAhAwH+AQACAwH/BPABAAEYAQADeAFEAUIBvwHjAf8BzgH/KvwBAAL/AfwBAAM/Af8B4AEAMP8XgAEAIQEB8AEAAj8B/wTgAQAFGAEEAQEBjwHAAf8BgQH/KvABAAJ/AfwBAAEMAQABfwH/AeABADB/Af8WwAEAIQEB4AEAAv8FwAEAAcABAAMYAQABAQGDAQABfgEBAf8q4AEAAj8B/gEAAQQBAAH/AuABADA/Af8WwAEAIuABAAEHAf8F4AEAAWABAAUJAQADAQH/KoABAAI/Af4BAAP/AvABADA/Af8WgAEAIvABAAEfAf8F8AEABQMBgAEIAQADwQH/KgADPwH8AQABCAF5Af8C8AEAMA8B/xYAIgEB+AEYAT8B/wX4AQAFAwH+AUgBAAIfAYEB/yn+AQADfwH8AQABPwH/A8ABADAPAf8V/AGAAQAhAQH/CPgBAAb/AYABAAJ/AQEB/yn8AQADfwH4AQABfwH/AvsBwAEAMAcB/xX+AQAiAwH/CPABAAYYAQADfgEBAf8p+AEAA/8B4AEBAf8D2QEAMQcB/xX6AQAiAwH/COABAAo4AQEB/yn+AQADfwGEAQMB/wGfAe8BkAEAMv8VwAEAIgcB/wjAAQALAwH/KoABAALwAQQBHwH/AvABADICAZ8B/xSAAQAiDwH/CIABAAsDAf8qwAEAAwwBHwGzAf8BwAEAMgEBAwH/FAAjHwH/CJABAAsDAf8qwAEAAwIBOQH/Ae8BgAEAMwEB/xP4AQAj/wn4AQALBwH/KuABAAIwAQAB/gF/AccBADQGAX8B/xLwAQAiAwH/CfgBAAsHAf8q4AEAAvABBwH+Af0BgAEANT8B/xLgAQAiBwH/CgALDwH/KvABAAJAAQ8B/wF4AQACAQEAMgYBHwH/EsABAB4YAQADDwH/CwADBwHAAQAFDwH/KvABAAMLAf8BMAEANh8B/xKAAQAeGAEAAx8B/wvAAQACPwH4AQAFHwH/KvgBAAMxAf8BADcfAf8R/AEABwgBABsfAf8L+AEAAn8B+AEABR8B/yr8AQAE/gEANw8B/xH8AQAjPwH/C/wBAAL/AgAFHwH/Kv4BAAT+AQA3BwH/EfgBACN/Af8L/AEAAQEB/wL4AQAEPwH/KwAE/AEANwcB/xHwAQAjfwH/C/4BAAEBAf8C+wHAAQABHAEAAX8B/ysAAwIBfAEANwcB+AF/Af8P4AEAI/8NAAL/A/wBAAF/AYAB/yv+AQAE/AEANwMB+AEfAf8P4AEAI/8N/AEAAf8EwwH/LgAEMAEANwEB+AEfAf8P4AEAI/8OgAH/MwAECAEAOPwBHwH/D+ABACP/DsEB/zL8AQAEGAEAOPwBDwH/D+ABACN/Af8N9wH/MvwBAARwAQA4/AEHAf8L4AEAAf8C4AEAI38B/xz3Af8j/gHAAQA8/gEHAf8L4AEAAT4BfwHgAQAj/x3AAf8kwAEAPH8BRwH/CY8B/wHAAQABOAE/AfABACIBAf8dwAF/Af8jgAEAPB8B8wH/CPwBAAEfAfABAAI/AfABACIBAf8dgAE/Af8jADsCAQABBwHzAf8I+AEAAR0BMAEAAg8B+AEAIeABAwH/HYABPwH/IwA7AgEAAQMB8wH/COABAAUHAfgBAB+AAQABwAEPAf8V7wH/B8ABHwH/Iv4BAD0BAfAB/wiAAQAFBwH8AQAfgwEBAYABHwH/HcABDwH/IvwBAD0RAfgBfwH/Bv4BAAYHAfwBAB8OAQEBgAF/Af8d4AEPAf8i/gEAAwYBADkxAfgBPwH/BvwBAAYPAfwBAB8+AWMBAwH/HuABBwH/IvgBAAMEAQA5DwH8AR8B/wbwAQAGDwH8AQAfgAHgAQ8B/xfHAf8G8AEDAf8i8AEAAxABADkPAf4BBwH/BvABAAYHAf4BAB4BAYABAAEfAf8W/gEHAf8G+AEAAX8B/yHgAQADEAEAOQcB/gEHAf8G4AEABgcB/wEAIT8B/xb+AQMB/wb8AQABPwH/IeABAD0DAf8BAwH/BuABAAYDAf8BACE/Af8XAQH/Bv4BAAEfAf8hwAEAPv8BwAH/BuABAAYDAf8BAAFgAQAfPwH/FwAB/wcAAQcB/wGfAf8fgAEAA0ABADofAcABfwH/BeABAAYBAf8BDwGwAQAf/xiAAf8HgAEAAf8BDwH/H4ABAAIBAcABAAaAAQAzDwHgAR8B/wXwAQAGAQH/AQABEAEAHgMB/xiAAX8B/waAAQACTwH/HwADAQEAOwMB8AE/Af8F8AEAB/8BAAEwAQAeAwH/GMABPwH/BqwBAALPAf8e/gEAAwIBADsBAfABPwH/BfABAAd/AQABMAEAHgcB/xjAAT8B/wa+AQABAQHHAf8e/gEAPwEB8AE/Af8F8AEABz4BAAEEAQAeBwH/GOABPwH/BtwBAAEDAcEB/x8APwEB8AEHAf8F4AEABx4BAAEEAQAeDwH/GOABHwH/Bt4BAAEHAcABDwH/HgA/AQH8AQMB/wXgAQAHHgEBAWEBAB4PAf8Y8AEPAf8G/gEAAQ8BwAEAAQ8BwAEgAT8B/xnwAQ8BAD4DAfwBAQH/BcABAAgBAYMBAB4PAf8Y8AEPAf8G/gEAAR8BwAEABD8B/xnwAR8BAAEEAQA8AQH4AQAB/wXAAQAHcAEDAYEBQAEAHR8B/xj4AQcB/wb8AQABPwHgAQAEDwH/GeABPwEAAUABAD3/AYABfwH/BMABAAgBAYABQAEAHT8B/xj8AQcB/wb+AQwBfwHwAQAEBwH/GcABPwEDAYABAD0fAYABPwH/BMABAAnAASIBAB1/Af8Y/gEBAf8HfwH/AfgBAAQHAf8ZAAF+AQA/DwGAAQ8B/wSAAQAJwAEAHv8Z/gEAAX8B/wj+AQAEAwH/GP4BAAF+AQA/BwHAAQ8B/wSAAQAKoAEAHf8Z/AEAAT8B/wngAQAE/xj8AQAB/AEAPwEB4AEHAf8EgAEAClABABwBAf8Z/gEAAT8B/wnwAQAEPwH/F/ABAAH8AQA/AQHAAQMB/wSAAQAGBwH8AQACEAEAHAEB/xn+AQABHwH/CfgBAAQ/Af8X4AEAAfwBAD8BAYABAQH/BIABAAZ/Af8BgAEAAQsBABwDAf8aAAEfAf8J/AEABA8B/xfAAQAB+AEAQv8EgAEABQEB/wLmAQABAQGAAQAbAwH/GsABDwH/Cf4BAAX/FvABAAJ4AQBCfwH/A4ABAAUDAfEB/wIAAQEBmAEAGwcB/xrgAQ8B/woABA8B/xbAAQACcAEAJ2ABABp/Af8DgAEABQMB4AH/AsABAB0PAf8a8AEPAf8J/gEABA8B/wG/Af8I+QH/CvwBgAEAAjABACYBAWABABp/Af8DwAEABQ8BHAEDAf8B4AEAAQMBwAEAGg8B/xrwAQ8B/wn+AQAEBwH/Ab8B/wf+AcEB/wrwAQADEAEAJwEBgAEAGAQBPwH/A+ABAAMHAbABAAEcAQABfwHwAQAdDwH/GvABDwH/CfwBAAQDAf8BvwH/Bv4B+AEBAf8J/gEwAQArAQHAAQAZHwH/A+ABAAN/AfgBAAEIAQABBwH8AQABEAEAGw8B/xr4AQ8B/wn8AQAEAQH/Ab8B/wb4AQAC/wf+AQ0B8AEALRgBABkfAf8D4AEAAgMB/wH8AQADAwH/AcABcAEAGx8B/xr4AQ8B/wnwAQAF/wG/Af8G8AEAAv8H/gEDAcABAC0PAQAZPwH/A/ABAAIDAf8B+AEAAwMB/wHAAWABABsfAf8a+AEHAf8J4AEABX4BHwH/BvABAAJ/Af8G+AEDAcABAAQBAQAoAwEAGT8B/wPwAQACAwH/AfgBAAR/AfwBABwHAf8a+AEDAf8J8AEABh8B/wbwAQACfwH/BuABAQHAAQAEAQEAQn8B/wP4AQACAwH/AegBAAQfAf8BABwDAf8a+AEDAf8JcAEABh8B/wbgAQACPwH/BuABAQHAAQAEAQEAKeABABh/Af8D/AEAAgMB/wHgAQAEfwH/AQwBABsBAf8a+AEAAf8JAAc/Af8G4AEAAh8B/wbAAQAB4AEALvABABg/Af8D/gEAAgcB/wHgAQAEfAF4AT4BfAEAGgMB/xr4AQABPwH/CAAHPwH/BsABAAIfAf8GAAEPAfABAC74AQAYHwH/A/4BAAIHAf8B4AEABj8B/wGAAQAZAwH/GvgBAAEfAf8H/gEABz8B/wX+AQADAwH/BgABDwHwAQAu+AEAGB8B/wP+AQACDwH/AcABAAIgAQADBwH/AeABABkDAf8a/AEAAR8B/wf+AQAHHwH/BfgBAAMDAf8GAAE/AeABAAQEAQAp4AEAGAcB/wQAAh8B/wHAAQAGBwH/AeABABkDAf8a/AEAAQ8B/wgABx8B/wXwAQADAwH/Bf4BAAE/AeABAAQIAQA/GAEAAgEB/wSAAQABPwH/AcABAAYfAf8B/AEAGQEB/xr8AQABDwH/B/4BAAcfAf8F4AEAAwMB/wX+AQABPwHAAQAEAQEAQ38B/wP4AQcB/wLAAQAFAwHHAf8B/gEAGQEB/xsAAQcB/wfgAQAHHwH/BcABAAMCAf8GAAE/AcABAAQ4AQBDfwH/A/wB/wOAAQADAwH4AQMB/wL+AR8ByAEAFwEB/xuAAQcB/wfgAQAHHwH/BYABAAR/Af8FgAEfAYABAAQ/AcABAEIfAf8HgAEAAwEB/gEBAdwB8AEAAR8B4AEQAQAWAQH/G+ABAwH/B+ABAAcPAf8FAAV/Af8FwAEABj8BgAEACgEBADj/B4ABAAT+AQACcAEAAQsBABgBAf8b4AEDAf8HgAEABw8B/wT8AQAFPwH/BcABAAZ/AYABAEN/Af8F/gEACCABAAIMAQABgAEAFQEB/xvwAQAB/wb8AQAIDwH/BPwBAAU/Af8F4AEABn8BgAEAQx8B/wX+AQAMDAEAFgEB/xvwAQABfwH/BfwBAAgPAf8E8AEABT8B/wXwAQAGfwHAAQBDDwH/Bf4BAAwEAcABABEwAQADAQH/G/gBAAF/Af8F+AEACAcB/wTAAQAFPwH/BfgBAAZ/AcABAEMBAf8F/gEAHzgBCAEAAgMB/xv4AQEBPwH/BQAJBwH/BMABAAV/Af8F/AEABn8BwAEARH8B/wT+AQAMAQEAEgMBCAEAAgMB/xv4AQEBnwH/BPgBAAkHAf8EwAEABX8B5wH/BP4BAAZ/AcABAEQHAf8E/gECAQAM4AEAFQMB/xv4AQABHwH/BOABAAkHAf8EgAEABX8BwwH/BYABAAQBAX8BgAEARAEB/wH3Af8C+AEADUABABIMAQACAwH/G/gBgAEfAf8EgAEACQcB/wP4AQAGfwEDAf8FgAEABAEB/wGAAQBFfwHAAf8C/gH3Af4BAAsgAQAVBwH/G/0BgAEfAf8EgAEACQMB/wP4AQAGfgEDAf8FwAEABAEB/gEARgcBAAE/Af8EgAEACiABABUHAf8b/AHAAR8B/wSAAQAJAwH/A4ABAAcBAf8F4AEABAEB/gEASB8B/wTAAQAKIAEAElABAAIPAf8cgAE/Af8EAAoBAf8DgAEABwEB/wXwAQAEAQH8AQBIDwH/BOABAB1QAQACHwH/HIABHwH/A/gBAAoBAf8DgAEABwEB/wXwAQAF/QEACwIBADwHAf8E8AEAChABABECAUABAAI/Af8c4AEfAf8DwAEAC/8DgAEABwEB/wXwAQAF/wEACwIBADwDAf8E4AEAChgBABU/Af8c+AEPAf8C/AEADH8B/wKAAQAHAQH/BfgBAAV/AQBIAQH/BPABAAoIAQAVHwH/HPwBDwH/AvgBAAx/Af8CgAEACP8F+AEABX4BYAEASH8B/wPgAQAKCAEAFQ8B/xz+AQ8B/wLwAQAMPwH/AoABAAj/BfgBAAU/AfABgAEACQgBAD0fAf8D4AEAChgBABUHAf8dDwH/AgANPwH/AoABAAj/BfwBAAW/Af8BwAEASP8DwAEAIAcB/x2HAf8B/AEADT8B/wKAAQAFCAEAAv8F+AEABQ0B/gHAAQAJEAEAPh8B/wLAAQAKEAFAAQAUDwH/HccB/wHgAQANPwH/AsABAAUYAQACfwGfAf8D+AEABX0B7wEACjABAD4HAb8B/wHAAQAKEAFgAQAUBwH/HecB/AEADh8B/wLAAQAFGAEAAn8BnwH/A/wBAAU8AQ8BgAEASX8B/wHAAQAgBwH/HvgBAA4fAf8CgAEABTABAAI/AZ8B/wP8AQAFHAEPAYABAEk/Af8BwAEABQEBgAEAGQcB/x35AcABAAMHAcABAAkfAf8CgAEABRABAAJ/AR8B/wP8AQAFHAHHAdgBAEkfAf8BwAEABeABkAEAGQcB/x38AQAEBwHAAQAJDwH/AoABAAUQAQAC/wEAAf8D+AEABR0B5gF8AQBJDwH/AcABAAQBAfEBmgEAA0ABABUDAf8d/AEADw8B/wIABjABAAJ/AQABfwH/AvgBAAQBAcABjwF8AQBJBwH/AcABAAQDAeEBgAEAGQEB/x34AQADOAEACwcB/wIABjgBAAL/AQABHwH/AvgBAAQBAYECnAEASQMB/wHAAQAEDwHBAcABABq/Af8c+AEAA/gBAAsDAf8B/gEABiABAAL+AQABLwH/AvgBAAQBAQAB8AF8AQBJAQH/AYABAAMBAb8BgwH8AQADBAEAFv8d/AEAAm8B+AEACwMB/wIABiABAAIeAQABDwH/AvABAAQDAQAB+AF+AQBK/wGAAQADDQH/Ad8B/gEAAQMBgAEMAQAVAQG/Af8c/gEAAQ8B/wH4AQALAQH/AgAJPgEAAQ8B/wLgAQAEBgEAAfkB/gEASv8BwAEAAx8B/wL+AQABIwGAATgBABYfAf8dAwG/Af8B+AEACwEB/wIABmABAAK8AQABDwH/AsABAAQGAQEB/wHwAQBKfwHAAQADPwH/Az8BAwH/AfABABYHAf8djwH/AvgBAAsBAf8CAAZgAQACPAEAAQcB/wIABQcBAQH/AZgBAEr/AeABAAN/Af8EgwH8ATABABYHAf8g/AEADP8CAAk4AQABAQH/AfwBAAUOAQEBPwEaAQBK/wHwAQADfwH/Ab8B/wP+AfABABYDAf8g8AEADP8B+AEACTgBAAK/AeABAAUYAQABHgHaAQBKfwH4AQADfwH/AR8B/wTAAQAX/yDwAQAMfwH4AYABAAi4AQACHwHgAQAFMAEAAX8B4AGAAQBJFwH8AQABYAEAAX8B/wEfAf8E8AEAF38B/x/wAQAMfwHxAcABAAg5AYABAAEfAeABAAVgAQABfwHHAQAGgAEAQwEB/gEAAf4BAQH/Ap8B/wT4AQAXPwH/H/ABAAx/AfgB4AEACHsBgAEAAR8BgAEABeABAAE8AQMBgAEASv8BhwH/AYEB/wf4AQAXHwH/H+ABAAx/AeUB8AEABRABAAJ/AQACHgEABQMBwAEAARoBMwGAAQBKfwH/Ac8BxwH/B/gBABcfAf8fwAEADD8BgQH4AQAIfwEAAhwBAAUHAYABAAIfAcABAEp/Af8BhwHvAf8IABcfAf8fwAEADB8BgQH4AQAIfwEAAhgBIAEABAYBAAIGAX8BgAEASn8B/wELAf8JwAEAFh8B/x+AAQAMHwGBAfwBAAh/AYABAAcEAQACDwF/AcABAEoIAf4BAwH/CfABABYfAf8fgAEADAcBAQH8AQAIXwHAAQAHDAEAAn8B/wHAAQBLfwEDAf8J+AEAFg8B/x8ADgEB/gEABQQBAAJPAcABAAcIAQAC/wLAAQBL/wEBAf8J/AEAFg8B/x7+AQAOAQH+AQAIDwHAAQAK/QH/AeABAAMgAQBHzwEBAf8J/AEAFgcB/x7+AQAOAQH/AQAFAgEAAgcBwAEABwgBAALUAf8B4AEAAyABAAcDAQBB/wn8AQAX/x78AQAOAQH/AQAFAwEAAgMB4AEABwgBAAEBAYAB/wHgAQAVCAEAN38B/wkAF38B/x38AQAOAQH/AQAFAQEAAgMB/gEABzgBAAKAAfwBwAEAD8ABAD0/Af8JgAEAFj8B/x34AQAOAQH/AQAIAwH+AQAHPgEAAQEBwAH8AYABAE0/Af8J4AEAFg8B/x34AQAP/gEACAMB/wEAB34BAAEBAYAB/gGAAQBNPwH/CfABABYHAf8F/gEAAT8B/xX4AQAP/AEACX8BwAEABv4BAAEYAQABfgEATj8B/wsAFQEB/wXwAQABHwH/FfABAA8gAQAGBAEAAn8B4AEABv8BwAEcAQABHgEATj8B/wvgAQAV/wWAAQABDwH/FeABABYHAQACfwHwAQAFAwH/AeABAAIEAQBOPwH/C/gBABV/Af8D/gEAAgcB/xXgAQAWBwGAAQAB/wH4AQAFBwH/AfgBgAEAFBABADs/Af8L/AEAFT8B/wH+Af8B+AEAAgcB/xXAAQAWBwH+AQABfwH8AQAFAwH/AfkBgAEAUD8B/wwAFQ8B/wEAAQMBwAEAAgcB/xWAAQAWBwH/AQABPwH8AQAFPwH/AYABAFE/Af8MgAEAFAMB+AEABQMB/xWAAQAWAwH/AYABPwH8AQAF/wLAAQBRPwH/DOABABXgAQAFAQH8AR8B/xMAFwEB/wGAAT8B/AEABAEB/wLgAQADEAEATT8B/wzwAQAdDwH/Ev4BABj/AcABPwH8AQACwAEAAQEB/wIABBABACQgAQAoHwH/DPABAB0HAf8S/AEAGH8B4AEfAfwBAALAAQABAwH/Af4BAAQgAQBNHwH/DPABAB0zAf8S+AEAGB8B+AEfAfwBAALAAQABBwH/Af4BAAMCAQBOPwH/DPABAB1xAf8S8AEAGA8B/gEPAfwBAAQPAf8B/gEAAwIBAE5/Af8M8AEAHQEB/xLwAQAYBwH/AQcB/AECAYABAAI/Af8B/gEAGxABADZ/Af8M+AEAHQEB/xLgAQAXAQEHAf8BBwH8AYMBAAEQAQMB/wL+AQBRAQH/DfgBAB0BAf8SgAEAFwEBwwH/AYMB/wEAAwcB/wMAAwQBAAFgAQBLBwH/DfwBAB0BAf8SABlDAf8BwQH/AQADDwH/A4ABAARgAQBLBwH/Df4BAB0BAf8R/gEAGQwB/wH+AX8BgAEAAgcB/wMABAEBYAEAJCABACYPAf8N/gEAHQEB/xH4AQAaPwH+AT8BgAEAAQcBDwH/AwAEAwEATA8B/w6AAQAbBAEDAf8R4AEAGj8B/wHPAYABAAEPAe8B/wPAAQACGAEDASABAEsPAf8OgAEAHAcB/xHAAQAZDgEfAf8BxwGAAQABDwH/BOABGAEAATgBBwHgAQAVCAEANT8B/w6AAQAcBwH/EYABABkHAR8B/wH1AeABAAEfAf8E8AEfAYABcAEHAeABAEoBAf8PAB0DAf8RABoHAQ8B/wH8AeABAAEfAf8E8AH/AvABAwHAAQBKAQH/DwAdBwH/EP4BABoDAQ8B/wH8AQACHwH/A/4BAAH/AuABBwHgAQBL/w+AAQAbIAEHAf8Q/AEAGw8B/wH+AQACHwH/A/4BAQHbAQ8BwAEDAfABAEUgAQAEAQH/D+ABABsgAQcB/xD4AQAbBwH/Af4BIAEAAQ8B/wP8AQEBgAEAAgMBAEZ8AQAEAwH/D/gBABwHAf8Q8AEAG0EB/wH+ATABAAEPAf8D/AEBAYABAAIDAQQBfAEARHwBAAQDAf8O7wH+AQAcBwH/EOABABtBAf8B/gFwAQABDwH/A/wBAQEDAQACDwGAATwB8AEAQzsBIAEAAwMB/w73Af0B8AEAGx8B/xDAAQAbQAH/AfwBQAEAAQcB/wP+AQMBgAEcAQABDwGAAQEB/AEGAQBCOAFgAQADBwH/EPwBABsfAf8QgAEAGxABfwH/AQACBwH/A/wBAwHHAfwBAAEHAUABfwH/AZMBgAEADwIBADYPAf8RgAEAGh8B/xAAHDgBfwH/AcABAAEHAf8D+AEHAecB+AEAAz8B/wGRAcABAEECAQAEDwH/D/sB/wHoAQAaDwH/EAAcOAE/Af8BwAEAAv8D4AEHAf8B/AEAAQcBAAEfAf8BgAEABgIBAEAPAf8R+AEAGg8B/w/+AQAcGAE/Af8BxwGAARAB/wPgAQcB/wGaAXgBBwGAAUEB/wGDAccBwAEABAIBAEAHAf8R/AEAGgcB/w/8AQAdHwH/Ae8BgAEAAf8DwAEHAf4BCQF/AYABAQHAAf8BgAH/AfABAAMQAQBBDwH/Ef4BABoHAf8P+AEAHAIBHwH/AoABAAH/A8ABDwH+AQABAQEAAoAB/wHAAR8B/AEAAzwBAEEPAf8R/gEwAQAZAwH/D/ABABwDAR8B/wH9AcABAAH/A+ABDwH/AQABAQGAAQACCQGAAX8B/wHgAQAEwAEAPwMB/xL8AQAZAQH/D+ABAB2PAf8C4wGAAf8DwAEfAf8BgAEABN8B4AH/AvwBAATQAQA/AQH/FIABABj/D4ABAB3HAf8C9wGAAX8B/wLAAR8BzwHAAQABAQH/AQAB/wHxAf8DAAQNAYABAD//FOABABh/Af8OgAEAHUMB/wKjAYABGQH/AoABHwHPAcABAAH5Af8B4AF/AfMB/wPgAQADBwEgAQA+AwH/FPgBABg/Af8OgAEAHQEB/wIAAgEB8wH/AYABHwHfAcABAAH7Af8B8AEfAf8E/gEAAwEBgAEAPgcB/xT8AQAYHwH/DgAf/wIAAgEBAAE/AcABAwHfAcABAAH5AeAB8AEfAf8FAARAAQA+DwH/FP4BABgPAf8OAB9/Af8BAAQ8AcABAwHPAeABAAEgAQABMAEdAf8F4AEAA3ABABkIAQAkHwH/FQAYBwH/Df4BAB9/Af8BAAQwAQABAwHDAfgBAAQcAT8B/wTwAQACAgE4AQA+PwH/FYABABcDAf8N/gEAHz8B/wEABgMBwwH4AQAFHwH/BPwBAAIDAfgBAD4/Af8V4AEAFwEB/w38AQAHBAEAFw8B/wEABgMBwwG4AQAG/wWAAQABAwH4AQA+HwH/FfgBABcBAf8N+wEAHwcB/wEABgMBwwHwAQAGPwH/A/4BAAIHAdABAD4fAf8W4AEAF/8N+wEAHwEB/wEABgcBwQH4AQAGBwH/A/4BCAEAAY8BgAEgAQA9HwH/FuABABf/DfMBAB/AAf8BAAYHAcEB+gEABAgBIAEBAf8ECAEBAZ8BgAEgAQAYgAEAJA8B/xbwAQAX/w3wAQAgfwEABgMBwAEwAQAEOAHgAQAB/wThAf8CAAEYAQA9HwH/FvABABd/Af8M/AEAICIBiAEAAiABAANgAQABgAEAAzABYAEAAf8E/AG/AfwBAAEcAQA9HwH/FvABABd/Af8M/AEAIAEB/gEABmABAAbgAQABfwH/A/4BDwHwAQABHgEAPQcB/xbwAQAXfwH/DPYBACABAf8BwAEQAQAL4AEAAX8B/wQDAQACDwEAPQMB/xb4AQAXPwH/DPgBACAPAf8B4AE+AQAL4AEAAT8B/wQAAwcBYAEAPf8W+AEAFz8B/wz8AQAgBwH/BIQBAAnAAQABPwH/A/ABAAMHATgBAD1/Af8V+AEAFx8B/wz8AQAhfwH/A0ABAAYgAQMBAAM/Af8D+AEAAwMBGAEAPX8B/xX4AQAXHwH/DPwBABBAAQAQfwH/AuABAAgGAQADfwH/A/gBAAQMAQA9PwH/FfgBABcPAf8M+QEAIQMB/wL7AYABAAQBAfQBAAEOAQAD/wT8AQAEIAEwAQA8PwH/FfgBAAkCAQANDwH/DQAiQwH/AsABAAQBAeABAwEMAQACAQH/Ax8B/wEABCgBOAEAPB8B/xX4AQAXBwH/DPwBACN/Af8B/gEDAYgBAAERAXgBAQGAARgBAAIBAf8C/gEBAf8BgAEAAy4BHgEAPA8B/xX4AQAXBwH/DPwBACMDAf8B/gHvAf0B+AE/AfoBOAEAARABAAIDAfAB/wH+AQABfwGAAQgBAAIHAjABADsPAf8V8AEAFwcB/wz8AQAkAQHuAf8D9gEPAfgBAAZ/Af4BAAF/AcABCAEAAgcBgQEwAQAcAQFAAQAdBwH/FfABABcPAf8M/AEAJQkB/wHxAf8BAAEfAeABAAY/AfwBAAE/AcABAASAARgBADsHAf8V4AEAFw8B/wz+AQAmGAEAA38BgAEABh8B+AEAAR8B+AGAATABAAIIAdgBABwBAQAeAwH/FeABABcPAf8M/gEAJw8BgAEBAfwBAAggAQABHwH4AfABAAMDAcwBAB0QAQAdAwH/FcABABcPAf8M/gEAJw8BwAEDAfABAAoHAf8BcAEAAwMB5gEAHRgBAB0BAf8VgAEAFwcB/wz+AQAnAwHgAQMB8AEACgMB/wEcAQADAQHwAQA7AQH/FQAYBwH/DYABACfwAQcB4AEACMABAAEBAf8B2AEABAQBADsBAf8U/gEAGAMB/w3AAQAfAgEABwEBBwEADAcB4AEABAcBADz/FPwBABgDAf8N4AEAJwEBDAEACeABAAPwAQAEAwGAAQEBgAEAOX8B/xP4AQAYAQH/DeABACgYAQAJ4AEACcABAQEAOn8B/xPwAQAYAQH/DcABACxBASABAAEgAQAC8AEARX8B/xPgAQAYAQH/DcABBAEAK/0B8AEAASABAALwAQAEBAGAAQA/PwH/E+ABABgBAf8NwAEEAQAr/AE4AQABQAEAAvABAAQGAQADwAEAAhABADkfAf8TwAEAGAEB/w3AAQQBACv4AT8BgwFAAQAC+AEACGABADwfAf8TwAEAGAMB/w3AAQABQAEAAQwBACgMAX8B/wFgAQABAQH4AQBFDwH/E4ABABgDAf8NwAECAUABAAEeAQAoPwH/AvABAAEDAfgBAEUHAf8TABkPAf8N4AEAAQgBAAEeAQAofwH/AuABAAEBAfwBAEUHAf8TABkfAf8N4AEAAQgBAAEfAQAo/wPgAQABAwH8AQBFAwH/EvwBABkfAf8N4AEAA18BACj/A+ABAAEDAfwBAEUBAf8S+AEAGT8B/w3gAQAD/wEAKP8DAAIDAf4BABUHAQAvAQH/EvABABk/Af8N4AEAAgEB/wGAAQAmAQH/A6ABAAEDAf4BABUCAcABAC4DAf8S8AEAGX8B/w3gAQACAQH/AYABACUcAQEB/wPwAQABAwH+AQALBgEACmABAC4DAf8S+AEAGX8B/w3gAQACAQH/AYABACX+AQMB/wNwAQABAwH+AQALBgEABgEBAAMEAQAuAQH/EvABABl/Af8N8AEAAgEB/wGAAQAkAgH/AQcB/wL+AQACAwH/AeABAAoGAQA6/xLwAQAZfwH/DfABAAIDAf8BgAEAJA8B/wGDAf8C/gEAAgMB/wHwAQAKIAEAOn8B/xHwAQAZ/w7wAQACBwH/AcABACQPAf8E/AEAAgMB/wH4AQAKKAEAOj8B/xHwAQAZ/w7gAQACDwH/AcABACQfAf8FAAIDAf8B+AEACjgBgAEAOR8B/xHwAQAZ/w7gAQACPwH/AcABACQ/Af8FgAEAAQMB/wH4AQAKOwEAOg8B/xH4AQAYAQH/DsABAAJ/Af8BwAEAJH8B/wX4AQABBwH/AfwBAAoYAYABABYQAQAiAwH/EfgBABBAAQAHAQH/DoABAAEDAf8B/gHAAQAkfwH/BfgBAAEHAf8B/AEACgwBgAEAOv8R+AEAGAEB/w6AAQABPwH/AgAkAgF/Af8F/gEAAQcB/wH8AQAKDgGAAQAEAQGAAQA0PwH/EPABABgBAf8OAAJ/Af8CACQTAf8HBgEHAf8B/AEACgcBwAEABA8BgAEADSABAANgAQAiDwH/EPABABgBAf8N/gEAAn8B/wIAJBsB/weOAQ8B/wH+AQAKBgHAAQAEPwGAAQANIAEAJgMB/xDwAQAYAQH/DfgBAAJ/Af8CACQ5Af8H+AEPAf8CAAvAAQAEPwEIAQA1/xDwAQAYAQH/DfABAAL/AvwBACR/Af8H+gEfAf8CAA8IAQA3PwH/D/ABABgBAf8NgAEAAv8C/AEAJP8I/gEfAf8CgAEADgMBwAEAD+ABAAMEAQAiPwH/D/ABABgBAf8M/gEAAgEB/wL8AQAk/wyAAQAK4AEAAwcB8AESAQAOMAEAJh8B/w/gAQAYAQH/DPgBAAP/AvwBACT/DIABAApAAQADBwHkAQgBADUPAf8PwAEAGAEB/wzwAQAD/wL8AQAkfwH/C4ABAA4HAeQBABMEAQAiAwH/D8ABABn/DOABAAP/AvwBACMBAf8MwAEAEgEBgAEAMgMB/w+AAQAZ/wzAAQAD/wL8AQAjAwH/DMABAAoIAQA7AwH/D4ABABl/Af8LgAEAA38B/wH4AQAjAwH/DMABAAoMAQAEQAEABYABADADAf8PwAEAGT8B/wsABH8B/wH4AQAjBwH/DOABAAUBAQAJgAEANgEB/w/AAQAZPwH/CvwBAAR/Af8B8AEAIw8B/wz8AQAFAQEABAQBADsBAf8PgAEAGR8B/wr8AQAEfwH/AfABACMfAf8M/gEACgQBADsBAf8PABofAf8K8AEABH8B/wHwAQAiAQH/DoABAEUBAf8PABoPAf8K4AEABH8B/wHgAQADBgEAHh8B/w7gAQAHgAEAAQEBADsBAf8O/gEAGg8B/wrgAQAE/wLgAQADBgEAHv8P8AEAB+ABIAEAPAEB/w7+AQAaBwH/CvABAAT/AuABACE/Af8P4AEAB3ABCAEAGgQBACEBAf8O/AEAGgcB/wrwAQADAQH/AsABAAIGAQAdBAH/EPgBAAd8AQwBAAgwAQAHgAEAKwEB/w74AQAaAwH/CvgBAAMBAf8CwAEAAgcBAB0BAf8Q+AEABz4BDAEACAgBADMBAf8O8AEAGgEB/wr4AQADAwH/AsABAAIHAQAdAwH/EPwBAAcfAQEBgAEAOwEB/w7wAQAaAQH/CvgBAAMHAf8CgAEAIB8B/xD8AQAHBwHBAYABADsBAf8O8AEAG/8K/AEAAwcB/wKAAQAfAQG/Af8Q/AEABwEB4AEAPAEB/w7wAQAb/wr8AQADBwH/AoABAB8BAf8SgAEAB/ABADwBAf8OwAEAG38B/wn8AQADBwH/AgAgAQH/EuABAAcwAQA8AwH/DoABABs/Af8J/AEAAwcB/wIAIAMB/xLgAQAHBgEAPAMB/w6AAQAbfwH/Cf4BAAMHAf8CACABAf8S4AEARAcB/wz9AcABABx/Af8J/gEAAwMB/wH+AQAgAQH/EuABAEQHAf8M/AEAHT8B/wn8AQADAwH/Af4BACABAf8S8AEARAMB/wzwAQAdPwH/CfwBAAMDAf8B/gEAIAMB/xL4AQBEAwH/DGABAB0/Af8J/AEAAwMB/wH+AQAgAwH/EvwBAEQDAf8L/AEAHj8B/wn8AQADAwH/AfwBACAHAf8TACcCAQAcBwH/C/gBAB4/Af8J/AEAAwMB/wH8AQAgBwH/EwBEBwH/C+ABAB4/Af8J+AEAAwEB/wH4AQAgAwH/E8ABAEMHAf8LwAEAHh8B/wngAQADAQH/AfgBACADAf8TzAEAQwMB/wuAAQAeHwH/CQAF/wHwAQAgAQH/E+wBAEMHAf8LAB8fAf8I/AEABT8BACEBAf8T+AEAQwcB/wr+AQAfHwH/CPABAAUOAQAhHgH/E/gBAEMHAf8K/AEAHx8B/wjgAQAnDgH/E/gBAEMHAf8K/AEAHx8B/wjwAQAnDwH/E/gBAEMHAf8K/AEAHw8B/wjwAQAnBwH/E/gBAEMHAf8K/AEAHw8B/wjwAQAnBwH/E/gBAEMPAf8K/AEAHw8B/wjwAQAnAwH/E/gBADAgAQASDwH/CvwBAB8HAf8I8AEAJwEB/xP8AQBDDwH/Cv4BAB8HAf8I4AEAKP8T/AEAQw8B/wr+AQAfBwH/COABACj/E/wBAEMfAf8K/AEAHwMB/wjgAQAo/xP8AQBDHwH/CvwBAB8BAf8I4AEAKP8T/gEAQx8B/wr8AQAg/wjAAQAofwH/Ev4BAEM/Af8K+AEAIH8B/wfAAQAoPwH/Ev4BAEM/Af8K8AEAID8B/weAAQAoPwH/Ev4BAEM/Af8KwAEAIB8B/wb+AQApHwH/EvwBAEM/Af8KwAEAIB8B/wb8AQApHwH/EvwBAEM/Af8KgAEAIA8B/wb4AQApHwH/EvwBAEM/Af8KACEPAf8G+AEAKR8B/xL4AQBDPwH/CgAhDwH/BvABACkPAf8S+AEAQ38B/wn+AQAhBwH/BuABACkPAf8S+AEAQ38B/wnmAQAhBwH/BuABACkPAf8S8AEAQ38B/wnsAQAhAwH/BsABACkPAf8S+AEAQ38B/wnYAQAhAwH/BoABACkHAf8S8AEAQ38B/wmYAQAhAQH/BgAqBwH/EvABAEN/Af8JYAEAIv8F/gEAKgMB/wf3Af8K8AEAQz8B/wnAAQAifwH/BPwBACoBAf8G4AEBAf8K4AEAQz8B/wkAI38B/wT4AQAqAQH/BoABAAEfAf8J4AEAQz8B/wj+AQAjfwH/BPABACoBAf8FOAEAAgEB/wnAAQBDPwH/CP4BACP/BeABACoDAf8E/AEABH8B/wjAAQBDfwH/CPwBACIBAf8FgAEAKgMB/wTwAQAE/wmAAQBDfwH/CPwBACIBAf8FACsDAf8EgAEABH8B/wf+AQBEfwH/CPgBACP/BPwBACsDAf8EgAEABB8B/QH/BvwBAEAIAQADfwH/CPABACN/Af8D8AEAKw8B/wQABR8B+QH/BvwBAET/CeABACN/Af8C/gEALA8B/wP+AQAFDwHzAf8G/AEARP8JwAEAI38B/wHcAfABACwPAf8B/gEABwcBwwH/BvgBAET/BvwB/wKAAQAjXwH/AQAuDwH/AfwBAAcHAYMB/wbwAQAKEAEAOAEB/wb+AR8B/wEAJAcBwAEALgEB/wHwAQAHDwEDAX8B/wXwAQAKGAEAOAEB/wfDAbwBAFX/AcABAAcDAQ8BPwH/BfABAAoMAQA4AwH/B+ABAFYPAQAJHgF/Af8F4AEACg8BgAEANwMB/wfwAQBhfwH/BcABAAoPAcABADcHAf8H8AEAYB4BbwH/BcABAAoHAcABADcHAf8H4AEAYD8BjwH/BYABAAoDAcABADcPAf8H8AEAYBYBAwH/BYABAAoBAeQBADcPAf8H/AEAYQMB/wWAAQAL4gEANx8B/wf8AQBhAQH/BYABAAt2AQA3HwH/B/wBAGEBAf8FAAx7AQA3XwH/B/gBAGEBAf8FAAw/AQA3fwH/B/ABAGEBAf8FAAw/AQA3fwH/B/ABAGL/BQAMHwHBAcABADV/Af8H4AEAYn8B/wP8AQAMHwH/AcABADU/Af8HwAEAYh8B/wHvAf4BAA0fAf8BwAEANT8B/weAAQBiBwH/Ad8B/AEADT8B/wHAAQA1PwH/BvwBAGQfAQcB8AEADT8B/wGAAQA1PwH/BsABAGQGAQEBwAEADX8B/wEANj8B/wWAAQBnQAEADAEB/wIANh8B/wUAdQEB/wHwAQA2PwH/BQBmAQGAAQAO/wH4AQA2fwH/BQBmAQGAAQEBgAEADD8B8AEANn8B/wT+AQBmAQGAAQEBgAEADA8B8AEANn8B/wT+AQBpwAEADAcB4AEANv8F/gEAaYABAAtgAQ8BwAEANv8F/gEAZz4BAwGAAQAL+QEfAcABADb/BPAB+AEAZz8B/wHAAQAL/wKAAQA2/wTwAQBoHwH/AcABAAv/Ab8BADd/Af8D8AEAaB8B/wHAAQAKAQH/AYQBADfvAf8D8AEAaA8B/wHAAQAKBwH/AYABADYBAecB/wP5AcABAGcHAf8BwAEACgcB/wEANwEBxwH/BMABAGcHAf8BAAsHAf8BADcBAc8B/wTAAQBnBwH/AYABAAoPAfwBADcBAe8B/wTAAQBnBwH/AQALHwH8AQA3AwHPAf8D/gEAaAMB/wEAC/8B+AEANwMBnwH/A/ABAGn8AQAKAQH/AeABADgfAf8D4AEAabABAAoHAf8B+AEABA4BADIBAZ8B/wPgAQB0HwH/AfgBAAQGAQAyAQGfAf8D4AEAdH8B/wEABQEBADIDAd8B/wPgAQBzAQH/AfwBADgHAf8EwAEAcwMB/wH4AQA4EwH/BMABAHMPAf8B+AEAOAMBvwH/Av4BAHQfAf8B+AEAOAMBvwH/AvABAHQfAf8B8AEAOAcB/wPgAQB0PwH/AfABADgfAf8D4AEAdD8B/wHgAQA4HwH/A8ABAHQ/Af8BwAEAOD8B/wPAAQA6AwEAOQEB/wEAOX8B/wPwAQB0AQF+AQA5bwH/A/gBADMDAQBAAQGAAQA5AQH/BIABAHMDAYABADkDAf8EgAEArhcB/wSAAQCuGwH/BIABAK5/Af8EAK9/Af8D/gEAr38B/wP4AQBDGAEAa38B/wPgAQBDHAEAa38B/wPAAQBDHwHgAQBqPwH/A8ABAEMfAcABAGp/Af8DgAEAQx8BgAEAaj8B/wOAAQCvPwH/AwCwNwH/AvgBALA/Af8C8AEAdYABADofAf8C8AEAdAEBgAEAOg8B/wLwAQCwHAH/AvABAAMHAf8BgAEAqhkB/wL4AQADBwH/AYABAKofAf8C+AEAAx8B/wEAqw0B/wL8AQADDgF+AQCrAQH/As4BALH/AnwBAHYIAQA5BwF/AfsB/gEAsAMB/wF7Af4BAEYHAQBqfwHzAf8BALH/Af0B/wGAAQCwPwH/AuABALANAf8C+AEADnwBAKL/Av4BAA4fAQCi/wPwAQANAwGAAQBgEAEAQD8B/wLnAYABAAwBAYABAKEOAf8B9gEAsn8BALMBAWABALNAAQD/AP8A/wD/AP8A/wD/ACICAQD/AP8A/wD/AP8A/wBQ8AEA/wBjPQEAswEBAP8AZgMBwAEAsg8BgAEAsngBALIfAYABALEGAQQBALIEAQACBwHwAQCxAQHzAfABALAEAR8B2QGAAQCwDwH/AaABALAHAY8B/wHgAQCw9wE/AfkB+AEArwEB+wH+AUABMAEAsP8B+AEAsQEB/wHAAQBRGAEAXwEB/wEAUXgBDAEAXgEBwwH/AYABAExAAQADeAEAXwEBnwH+AQwBADg/AfwBABJgAQADBwH8AQADAwH+AQBZBAF/Af8B/AEANwcB/wIAFHABAAGPAf8B+AEAAh8B/wGAAQAHOAH/AQ4BAE4IAX8B3AHQAQA3fwH/AvABABQwAX8B/wLwAQABPwH/AeABAAQHAcABAQH/Ar8B/wEADGABAD8BAcMB/wGMAQA3YAF/Af8C+AEADQgBYAEAAT8B/wiAAf8C/AEAAwMB/wHwAQMB/wUACwgBAD8DAfMB/wGAAQA3WAF/Af8CwAEADQcBDwH/Df4BAAIBAf8C/AEHAf8GzwEACQwBAD8HAbsB+AEAOD8B/wTgAQAMfwH/DvkB/wK/Af8L4AEASB8BfwH4AQA3fAEfAf8E+wHwAQAKAwH/HsABAAkwAQA+HwF/AeABADYDAf0BvwH/B/4BAAcBAf8fnwGAAQAIMAEAPx8BwAEANn8B/wv+AQAFfwH/IPABAEgfAfgBADU/Af8M/gEABB8B/yHwAQBIHwHwAXgBADMDAf8OAAQ/Af8j+AEBAYABAEQfAf0BwAEIAQAuDwGAAQACHwH/DgAEfwH/I/sBAQHgAQBC/wEAAT8B/wHgAQQBAC4/AYABAAEBAf8O/gEAAwEB/yb8AQBBAQH/AQABHwH/AfcBAC8/AfABAAEBAf8O/gEAAw8B/yf5AYABAD8OAf8BxwH/A4ABAC4fAfgBAAEDAf8O/gEAA38B/yj8AQA/DwH/AecB/wOAAQAuHwH/AfABBwH/DvgBAAIBAf8qgAEAPX4BAAH/AfMB/wL+ATABACUDAcABAAcfAf8C3wH/DvgBAAEPAf8rgAEAPfwBAAF/AfMB/wOAAQAeHAEAAwgBAAE4AQAB4AEQAQAD4AEAAQMB/xH+AQACHwH/K/ABAD/nAf0B/wMAGwMBgAE8AQABCAEYAeABAwG/AYABfwH/AfgBeAEHAcEBgAHwAQcB/xP4AQMBPwH/K/gB8AEAPB8BwAEfAfwB/wPOAQAaAQGAAXgBAAI4AT8B/wL5Af8D+AEPAccBwAEAAf8U+AEBAf8s/AH/AvABADkDAf8BwAEPAf4BfwH/AuwBABgDAQAB/wHAAR8BAAJ/Af8K+AEfAf8U+AEDAf8wADkDAfABHwH/Af4BPwH/AvQBABgBAfABfwGAAT4BAAEfAf8h8AEHAf8wwAEAOQMB/wL+AT8B/wLwAQAXAwHnAfgBfwH/AvgB/yLAAQcB/zD8AUABADg/Af8C/gE/Af8C8AEAFwEB/ygAAQ8B/zHgAQArfwLfAQAKPwH8Af8B/gEfAf8C8AEAGA8B/yb+AQMBPwH/MfABACoDAf8DwAEACQ8BwAH/Af4BDwH/AvwBABcMAR8B/yb8ATEB/zKAAQArAQH/AsABAAofAf8B+AEfAf8C/AEAGP8n+AFfAf8ygAEALAMB3wEcAQABeAEcAQAHDwH/AeABPwH/AvwBABUDAQABDwH/J/gB/zOAAQApGAE+AQADAQGAATkB/wEAAwIBAAJ+AQACAQH/BAAWAQH/KPAB/zMAKhwBHwH/AvgBAAF/ATsB/gFgAYABAAEHAeABAQH+AcABAAF/Af8EABb/KeMB/zL+AQAfPwHAAQAKDwH/CPABAAEfAfgBAAH/AY8B/wXYAQAVAwH/W/4BAwEAHz8B4AEfAQAJDwHgAX8B/wfwAR8B/wH4AX8B/wb4AQATDAEAAQMB/1r3AZABAwEAHwMB/wEfAf4BeAEOAQcBAAUPAf8U+AEAExwBAAEBAf9a9wEAIn8BjwH8AeABPAEPAcABcAEABH8B/xPwAQAT/AEAAh8B/1nwAQAeDwH4AQEB8AEAAQ8B8AEPAecBHwHgAX4BAAQ/Af8T+AEAEw4BAAF/Af9a/AEAHTgBAAHwAQAB+AEAAgcB/wPAAX4BAAQBAf8TgAEAFf9a+QG8AQAcAwH/C38B/gEABAMB/xL3AYABABQBAf9a4QEAHH8B/w74AQABPwH/AcABPwH/EfABABUHAf9a4AEAGwMB/ybgAQAVBwH/WoABABgBAeEB/yiAAQATHwH/XPABABgBAf8o8AEAEgEB/17wAQAXBwH7Af8n+AEAEz8B/17gAQAXfwH/J/gBABM/Af9f8AEAFgcBAAH/J4ABABIDAf9g4AEAFgcB/gEeAX8B/yH4AQAWPwH/YOABABIBAccB/wEAAQcB7gEAAf8i/gEAFQ8B/2H8AQABMAEAEAEB/wP8AX8B/gH/I8ABABMBAf9i/gEAAX8B+AEADwMB/wP+AT8B/yX4AQASAwH/YwABfwH4AQAPAwH/JvkB/wPwAQALAwH/AfABAAQ/Af9jwAEwAQAR/yfwAQMB/wGAAQALPwH/AgAEfwH/Y84B/gEAEj8B/yPvAf8C4AEABPgBAAj/A4ABAAIBAf9lwAEAEQMB/yTgAf8C4AEAAz8B8AEABwMB/wOAAQACAQH/ZfgBAA7/AeABAAL/JP4BAwHgAQADDwH/AYABAAcDAf8DwAEAAgEB/2N4AQAPAQH/AfwBAAIHAf8k4AEABH8B+AEACAcB/wPgAQACAwH/YvMBABABAf8CwAEAA/8j8wH/AgACfwHjAfABAAcHAf8D8AEAAgMB/wEAAQEB/1/gAQARDwH/AfABAAMDAf8lAAJ/AcABfwGAAQAGDwH/A/gBAAQDAe0B/1/AAQASDwHwAQABXgEAAgMB/yP+AQAEDwHAAQABPwHAAQADfwH/A/ABAAX/AYABAAEBAf9c4AEAFwMB/yUABAMBgAEAAX8BwAEAAj8B/wTAAQAGfwH/XsABABcHAf8lwAEAAwcB/wPAAQAC/wT4AQAFAQH/YOABABj/JeABAAF+AQACfwH/AoABAAEDAf8DgAEABT8B/2HwAQAY/yiAAQACDwH/AQACAwH/AgAFHwEDAf9i4AEAFAcB/yzAAQAMHwH/ZOABABH/AfABAAEPAf8twAEAC/9l+AEAEvwBAAIHAf8uAAkDAf9mgAEAEg4BAAEHAf8s/gEAB/8BwgEAAQ8B/2bwAQASAQGAAQMB/yyAAQABHAEAA/8EAAF/Af9m/gEAFT8B/y34AQACHwH/A/4BPwH/Z+cB+AEAEwEB/y38AQACBwH/b8ABAAgBAf8B+AEAA38BAAM/Af8uoAEAAf9w+AEACQ8B/wH8AQ8BgAEfAYABAAF/Af8v4AEHAf9xwAEACQ8B/wP+AQABAwH/pLgBAAkHAf+q+AEACXwBHwH/qfwBAAkHAf+r/AH/AgAFHwH/sf4BAAIfAf+0wAEAAX8B///////////////////////////////////////G";
+    const LAND_BITMAP_RES = 0.25;
+    const LAND_BITMAP_ROWS = 720;
+    const LAND_BITMAP_COLS = 1440;
+    let landBitmapBytes = null;
+
+    function decodeLandBitmap() {
+      if (landBitmapBytes) return landBitmapBytes;
+      const t0 = performance.now();
+      // Base64 decode
+      const raw = atob(LAND_BITMAP_RLE_B64);
+      const rle = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) rle[i] = raw.charCodeAt(i);
+      // RLE decode
+      const packed = [];
+      for (let i = 0; i < rle.length; i += 2) {
+        const value = rle[i];
+        const count = rle[i + 1];
+        for (let j = 0; j < count; j++) packed.push(value);
+      }
+      landBitmapBytes = new Uint8Array(packed);
+      const elapsed = (performance.now() - t0).toFixed(1);
+      console.log(`[BTS] Bitmap loaded: ${LAND_BITMAP_ROWS}x${LAND_BITMAP_COLS}, ${landBitmapBytes.length} packed bytes in ${elapsed}ms`);
+      return landBitmapBytes;
+    }
+
+    function bitmapIsLand(lat, lng) {
+      const bytes = decodeLandBitmap();
+      // Clamp latitude to [-90, 90]
+      lat = Math.max(-90, Math.min(90, lat));
+      // Wrap longitude to [-180, 180)
+      lng = ((lng % 360) + 540) % 360 - 180;
+      const row = Math.min(LAND_BITMAP_ROWS - 1, Math.floor((90 - lat) / LAND_BITMAP_RES));
+      const col = Math.min(LAND_BITMAP_COLS - 1, Math.floor((lng + 180) / LAND_BITMAP_RES));
+      const bitIndex = row * LAND_BITMAP_COLS + col;
+      const byteIndex = Math.floor(bitIndex / 8);
+      const bitOffset = 7 - (bitIndex % 8);  // MSB-first
+      return ((bytes[byteIndex] >> bitOffset) & 1) === 1;
+    }
+
+
+    // ===== State =====
+    const state = {
+      userLat: null,
+      userLng: null,
+      heading: null,
+      lastQueriedBucket: null,
+      isComputing: false,
+      currentResultName: null,
+    };
+
+    const headingCache = new Map();
+    const wikiCache = new Map();
+    let computeTimer = null;
+
+    // ===== DOM =====
+    const $ = (id) => document.getElementById(id);
+
+    // ===== Request Queue =====
+    const requestQueue = {
+      lastTime: 0,
+      async request(url) {
+        const now = Date.now();
+        const wait = Math.max(0, CONFIG.REQUEST_MIN_INTERVAL_MS - (now - this.lastTime));
+        if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        this.lastTime = Date.now();
+        const resp = await window.fetch(url);
+        if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+        return resp.json();
+      }
+    };
+
+    // ===== Route Map =====
+    let routeMap = null;
+    let routeLine = null;
+    let routeMarkerStart = null;
+    let routeMarkerEnd = null;
+
+    function initMap() {
+      if (routeMap) return;
+      routeMap = L.map('route-map', {
+        zoomControl: true,
+        attributionControl: true,
+        dragging: true,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        touchZoom: true,
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(routeMap);
+    }
+
+    function updateMap(startLat, startLng, endLat, endLng, placeName) {
+      $('route-map-container').hidden = false;
+
+      if (!routeMap) {
+        initMap();
+        // Leaflet needs a tick to measure container size
+        setTimeout(() => updateMapContents(startLat, startLng, endLat, endLng, placeName), 100);
+      } else {
+        routeMap.invalidateSize();
+        updateMapContents(startLat, startLng, endLat, endLng, placeName);
+      }
+    }
+
+    function updateMapContents(startLat, startLng, endLat, endLng, placeName) {
+      // Clear previous layers
+      if (routeLine) routeMap.removeLayer(routeLine);
+      if (routeMarkerStart) routeMap.removeLayer(routeMarkerStart);
+      if (routeMarkerEnd) routeMap.removeLayer(routeMarkerEnd);
+
+      // Adjust end longitude to take the shortest path from start.
+      // Leaflet accepts longitudes outside [-180,180] — this prevents
+      // the line from wrapping the wrong way around the world.
+      let adjustedEndLng = endLng;
+      let dLng = endLng - startLng;
+      if (dLng > 180) adjustedEndLng -= 360;
+      if (dLng < -180) adjustedEndLng += 360;
+
+      const startPoint = [startLat, startLng];
+      const endPoint = [endLat, adjustedEndLng];
+
+      // Interpolate lat/lng for a smooth line (rhumb lines are straight on Mercator)
+      const points = [];
+      const steps = 60;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const lat = startLat + (endLat - startLat) * t;
+        const lng = startLng + (adjustedEndLng - startLng) * t;
+        points.push([lat, lng]);
+      }
+
+      // Draw the route line
+      routeLine = L.polyline(points, {
+        color: '#4ecdc4',
+        weight: 2.5,
+        opacity: 0.7,
+        dashArray: '8, 6',
+        lineCap: 'round',
+      }).addTo(routeMap);
+
+      // Start marker (user location)
+      routeMarkerStart = L.circleMarker(startPoint, {
+        radius: 6,
+        fillColor: '#4ecdc4',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9,
+      }).addTo(routeMap).bindPopup('You are here');
+
+      // End marker (destination)
+      routeMarkerEnd = L.circleMarker(endPoint, {
+        radius: 7,
+        fillColor: '#ff6b6b',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9,
+      }).addTo(routeMap).bindPopup(placeName);
+
+      // Fit bounds to show the full route
+      routeMap.fitBounds(routeLine.getBounds(), {
+        padding: [30, 30],
+        maxZoom: 6,
+      });
+    }
+
+    function hideMap() {
+      $('route-map-container').hidden = true;
+    }
+
+    // ===== Rhumb Line Math =====
+    function toRad(deg) { return deg * Math.PI / 180; }
+    function toDeg(rad) { return rad * 180 / Math.PI; }
+
+    function computeDestination(lat1Deg, lng1Deg, bearingDeg, distanceKm) {
+      const R = CONFIG.EARTH_RADIUS_KM;
+      const d = distanceKm / R;
+      const brng = toRad(bearingDeg);
+      const lat1 = toRad(lat1Deg);
+
+      const dLat = d * Math.cos(brng);
+      let lat2 = lat1 + dLat;
+      if (Math.abs(lat2) > Math.PI / 2) lat2 = lat2 > 0 ? Math.PI / 2 : -Math.PI / 2;
+
+      let q;
+      if (Math.abs(dLat) < 1e-12) {
+        q = Math.cos(lat1);
+      } else {
+        const dPhi = Math.log(Math.tan(lat2 / 2 + Math.PI / 4) / Math.tan(lat1 / 2 + Math.PI / 4));
+        q = dLat / dPhi;
+      }
+
+      const dLng = d * Math.sin(brng) / q;
+      const lng2 = toRad(lng1Deg) + dLng;
+
+      return {
+        lat: toDeg(lat2),
+        lng: ((toDeg(lng2) + 540) % 360) - 180,
+      };
+    }
+
+    // ===== Land/Water Detection (Bitmap) =====
+    function checkIsLand(lat, lng) {
+      return bitmapIsLand(lat, lng);
+    }
+
+    async function getLastOceanName(lat, lng, bearingDeg, waterDist) {
+      // Check the last known water point for ocean name
+      const pt = computeDestination(lat, lng, bearingDeg, waterDist);
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/oceanJSON?lat=${pt.lat.toFixed(4)}&lng=${pt.lng.toFixed(4)}&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        if (data.ocean) return data.ocean.name;
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    function buildPlaceResult(p) {
+      return {
+        name: p.name,
+        country: p.countryName,
+        region: p.adminName1 || '',
+        population: p.population || 0,
+        timezone: p.timezone ? p.timezone.timeZoneId : null,
+        continentCode: p.continentCode || '',
+        countryCode: p.countryCode || '',
+      };
+    }
+
+    function scorePlaces(places) {
+      // Score = population / (distance_km + 10)^2
+      // Balances notability (population) with proximity
+      return places
+        .map(p => ({
+          place: p,
+          score: (p.population || 1) / Math.pow((parseFloat(p.distance) || 0) + 10, 2),
+        }))
+        .sort((a, b) => b.score - a.score);
+    }
+
+    async function getPlaceInfo(lat, lng) {
+      // Fetch multiple cities >5K pop and pick the most notable by score
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=10&radius=300&cities=cities5000&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        if (data.geonames && data.geonames.length > 0) {
+          const scored = scorePlaces(data.geonames);
+          console.log('[BTS] Place candidates:', scored.map(s => `${s.place.name} (pop ${s.place.population}, ${parseFloat(s.place.distance).toFixed(0)}km, score ${s.score.toFixed(2)})`).join(', '));
+          return buildPlaceResult(scored[0].place);
+        }
+      } catch (e) { /* fall through */ }
+
+      // Fallback: any nearby place
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=300&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        if (data.geonames && data.geonames.length > 0) {
+          return buildPlaceResult(data.geonames[0]);
+        }
+      } catch (e) { /* fall through */ }
+
+      // Last resort: country
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/countryCodeJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        return {
+          name: data.countryName || 'Unknown Land',
+          country: data.countryName || '',
+          region: '', population: 0, timezone: null,
+          continentCode: '', countryCode: '',
+        };
+      } catch (e) {
+        return { name: 'Unknown Land', country: '', region: '', population: 0, timezone: null, continentCode: '', countryCode: '' };
+      }
+    }
+
+    // ===== Wikipedia API =====
+    async function getWikipediaInfo(placeName, countryName) {
+      const cacheKey = `${placeName}|${countryName}`;
+      if (wikiCache.has(cacheKey)) return wikiCache.get(cacheKey);
+
+      try {
+        // Search for the place to get the right article title
+        const searchQuery = `${placeName} ${countryName} city`;
+        const searchUrl = `${CONFIG.WIKIPEDIA_API}?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srlimit=1&format=json&origin=*`;
+        const searchData = await (await window.fetch(searchUrl)).json();
+
+        let title = placeName;
+        if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+          title = searchData.query.search[0].title;
+        }
+
+        // Get page info with thumbnail and extract
+        const infoUrl = `${CONFIG.WIKIPEDIA_API}?action=query&titles=${encodeURIComponent(title)}&prop=extracts|pageimages&exintro&explaintext&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
+        const infoData = await (await window.fetch(infoUrl)).json();
+
+        const pages = infoData.query ? infoData.query.pages : {};
+        const pageId = Object.keys(pages)[0];
+        if (!pageId || pageId === '-1') {
+          const result = { thumbnail: null, extract: null, title: placeName };
+          wikiCache.set(cacheKey, result);
+          return result;
+        }
+
+        const page = pages[pageId];
+        const result = {
+          thumbnail: page.thumbnail ? page.thumbnail.source : null,
+          extract: page.extract || null,
+          title: page.title,
+        };
+        wikiCache.set(cacheKey, result);
+        return result;
+      } catch (e) {
+        console.error('[BTS] Wikipedia error:', e);
+        const result = { thumbnail: null, extract: null, title: placeName };
+        wikiCache.set(cacheKey, result);
+        return result;
+      }
+    }
+
+    // ===== Ray Casting =====
+    async function findLandfall(lat, lng, bearingDeg) {
+      const t0 = performance.now();
+      console.log(`[BTS] Starting landfall search: lat=${lat.toFixed(4)}, lng=${lng.toFixed(4)}, bearing=${bearingDeg}`);
+
+      const step = CONFIG.RAY_STEP_KM;  // 25km — matches bitmap resolution (~28km cells)
+      const maxDist = CONFIG.RAY_MAX_KM;
+
+      // Single-pass scan: bitmap lookups are instant (~1ms for 1000 steps)
+      let startsOnLand = false;
+      let sawWater = false;
+      let lastWaterDist = 0;
+      let firstLandPoint = null;
+
+      for (let d = step; d <= maxDist; d += step) {
+        const pt = computeDestination(lat, lng, bearingDeg, d);
+        const isLand = checkIsLand(pt.lat, pt.lng);
+
+        // First sample: check if ray starts on land (inland detection)
+        if (d === step) {
+          startsOnLand = isLand;
+          if (startsOnLand) console.log('[BTS] Ray starts on land — will flag as inland');
+        }
+
+        if (isLand) {
+          if (sawWater) {
+            firstLandPoint = { ...pt, dist: d };
+            console.log(`[BTS] Landfall at ${d}km: (${pt.lat.toFixed(2)}, ${pt.lng.toFixed(2)})`);
+            break;
+          }
+        } else {
+          sawWater = true;
+          lastWaterDist = d;
+        }
+      }
+
+      if (!sawWater) {
+        console.log('[BTS] No water found along entire ray — fully inland');
+        return { error: 'FACING_INLAND' };
+      }
+      if (!firstLandPoint) {
+        console.log('[BTS] No land found across the water');
+        return null;
+      }
+
+      const bitmapElapsed = (performance.now() - t0).toFixed(1);
+      console.log(`[BTS] Bitmap scan complete in ${bitmapElapsed}ms — querying GeoNames for place info...`);
+
+      // ── GeoNames API for place info + ocean name ──
+      const [placeInfo, oceanName] = await Promise.all([
+        getPlaceInfo(firstLandPoint.lat, firstLandPoint.lng),
+        getLastOceanName(lat, lng, bearingDeg, lastWaterDist),
+      ]);
+
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      console.log(`[BTS] Result: ${placeInfo.name}, ${placeInfo.country} at ${Math.round(firstLandPoint.dist)}km across ${oceanName}${startsOnLand ? ' (facing inland)' : ''} [${elapsed}s]`);
+
+      return {
+        lat: firstLandPoint.lat,
+        lng: firstLandPoint.lng,
+        distanceKm: Math.round(firstLandPoint.dist),
+        oceanName,
+        inland: startsOnLand,
+        ...placeInfo,
+      };
+    }
+
+    // ===== Compass =====
+    function getCardinal(deg) {
+      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(deg / 22.5) % 16];
+    }
+
+    function handleOrientation(event) {
+      let heading;
+      if (event.webkitCompassHeading !== undefined) {
+        heading = event.webkitCompassHeading;
+      } else if (event.alpha !== null) {
+        heading = (360 - event.alpha) % 360;
+      } else {
+        return;
+      }
+      state.heading = Math.round(heading);
+      updateCompassDisplay(state.heading);
+      scheduleLookup();
+    }
+
+    function updateCompassDisplay(heading) {
+      $('heading-display').textContent = `${heading}\u00B0`;
+      $('heading-cardinal').textContent = getCardinal(heading);
+      $('compass-icon').style.transform = `rotate(${heading}deg)`;
+    }
+
+    // ===== Debounce & Cache =====
+    function scheduleLookup() {
+      if (computeTimer) clearTimeout(computeTimer);
+      computeTimer = setTimeout(() => {
+        const bucket = Math.round(state.heading / CONFIG.HEADING_BUCKET_DEG) * CONFIG.HEADING_BUCKET_DEG;
+
+        if (headingCache.has(bucket)) {
+          const cached = headingCache.get(bucket);
+          if (Date.now() - cached.timestamp < CONFIG.CACHE_TTL_MS) {
+            displayResult(cached.result);
+            return;
+          }
+        }
+
+        if (bucket === state.lastQueriedBucket && !state.isComputing) return;
+        triggerComputation(bucket);
+      }, CONFIG.HEADING_DEBOUNCE_MS);
+    }
+
+    async function triggerComputation(bucket) {
+      if (state.isComputing) return;
+      state.isComputing = true;
+      state.lastQueriedBucket = bucket;
+      showComputing(true);
+
+      try {
+        const result = await findLandfall(state.userLat, state.userLng, bucket);
+        // Only cache successful results (not errors or null)
+        if (result && !result.error) {
+          headingCache.set(bucket, { result, timestamp: Date.now() });
+        }
+        displayResult(result);
+      } catch (err) {
+        console.error('Computation error:', err);
+        $('dest-name').textContent = 'Error';
+        $('dest-country').textContent = 'Please try again';
+        $('dest-distance').innerHTML = '';
+      } finally {
+        state.isComputing = false;
+        showComputing(false);
+      }
+    }
+
+    // ===== Display =====
+    function displayResult(result) {
+      $('dest-info').classList.remove('dest--faded');
+
+      if (!result) {
+        setDestination('Open Ocean', 'No land found in this direction', '');
+        hideExtras();
+        hideMap();
+        showPlaceholderPhoto('&#x1F30A;');
+        return;
+      }
+
+      if (result.error === 'FACING_INLAND') {
+        setDestination('Facing Inland', 'Turn toward the water', '');
+        $('dest-inland-note').style.display = 'none';
+        hideExtras();
+        hideMap();
+        showPlaceholderPhoto('&#x26F0;');
+        return;
+      }
+
+      // Show or hide inland note and update label
+      if (result.inland) {
+        $('dest-inland-note').style.display = 'block';
+        document.querySelector('.dest-label').textContent = 'Beyond the next water';
+      } else {
+        $('dest-inland-note').style.display = 'none';
+        document.querySelector('.dest-label').textContent = 'Across the water';
+      }
+
+      // Set main destination info
+      const countryParts = [result.country, result.region].filter(Boolean);
+      const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2L12 22M5 9l7-7 7 7"/></svg>${formatDistance(result.distanceKm)}`;
+      setDestination(result.name, countryParts.join(', '), distHtml);
+
+      // Update route map
+      updateMap(state.userLat, state.userLng, result.lat, result.lng, result.name);
+
+      // Ocean badge
+      if (result.oceanName) {
+        $('ocean-name').textContent = result.oceanName;
+        $('ocean-badge').style.display = '';
+      } else {
+        $('ocean-badge').style.display = 'none';
+      }
+
+      // Fun facts
+      showFacts(result);
+
+      // Fetch Wikipedia info (photo + description) asynchronously
+      if (result.name !== state.currentResultName) {
+        state.currentResultName = result.name;
+        showPlaceholderPhoto('&#x1F30D;');
+        getWikipediaInfo(result.name, result.country).then(wiki => {
+          // Check we're still showing the same result
+          if (state.currentResultName !== result.name) return;
+
+          if (wiki.thumbnail) {
+            const img = $('hero-img');
+            img.onload = () => {
+              $('hero-photo').classList.remove('hero-photo--loading');
+              $('hero-photo').classList.add('hero-photo--loaded');
+            };
+            img.onerror = () => {
+              // Image failed to load — keep placeholder visible
+              $('hero-photo').classList.add('hero-photo--loading');
+              $('hero-photo').classList.remove('hero-photo--loaded');
+              $('hero-credit').textContent = '';
+            };
+            img.src = wiki.thumbnail;
+            img.alt = result.name;
+            $('hero-credit').textContent = 'Wikimedia Commons';
+          }
+
+          if (wiki.extract) {
+            // Truncate to 2-3 sentences
+            const sentences = wiki.extract.split(/\.\s+/);
+            const short = sentences.slice(0, 3).join('. ') + (sentences.length > 3 ? '.' : '');
+            $('dest-extract').textContent = short;
+            $('dest-description').style.display = '';
+          } else {
+            $('dest-description').style.display = 'none';
+          }
+        });
+      }
+    }
+
+    function setDestination(name, country, distHtml) {
+      $('dest-name').textContent = name;
+      $('dest-country').textContent = country;
+      $('dest-distance').innerHTML = distHtml;
+    }
+
+    function showPlaceholderPhoto(emoji) {
+      $('hero-photo').classList.add('hero-photo--loading');
+      $('hero-photo').classList.remove('hero-photo--loaded');
+      $('hero-photo').querySelector('.hero-photo__placeholder').innerHTML = emoji;
+      $('hero-img').src = '';
+      $('hero-credit').textContent = '';
+    }
+
+    function showFacts(result) {
+      $('facts-grid').style.display = '';
+
+      // Population
+      if (result.population && result.population > 0) {
+        $('fact-pop-value').textContent = formatPopulation(result.population);
+      } else {
+        $('fact-pop-value').textContent = '--';
+      }
+
+      // Local time
+      if (result.timezone) {
+        try {
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString('en-US', {
+            timeZone: result.timezone,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          });
+          const dayStr = now.toLocaleDateString('en-US', {
+            timeZone: result.timezone,
+            weekday: 'short',
+          });
+          $('fact-tz-value').textContent = `${timeStr} ${dayStr}`;
+        } catch (e) {
+          $('fact-tz-value').textContent = '--';
+        }
+      } else {
+        $('fact-tz-value').textContent = '--';
+      }
+
+      // Region
+      $('fact-region-value').textContent = result.region || '--';
+
+      // Continent
+      $('fact-continent-value').textContent = CONTINENT_NAMES[result.continentCode] || '--';
+    }
+
+    function hideExtras() {
+      $('ocean-badge').style.display = 'none';
+      $('dest-description').style.display = 'none';
+      $('facts-grid').style.display = 'none';
+      $('dest-inland-note').style.display = 'none';
+    }
+
+    function formatDistance(km) {
+      const mi = Math.round(km * 0.621371);
+      return `${km.toLocaleString()} km (${mi.toLocaleString()} mi)`;
+    }
+
+    function formatPopulation(pop) {
+      if (pop >= 1_000_000) return `${(pop / 1_000_000).toFixed(1)}M`;
+      if (pop >= 1_000) return `${(pop / 1_000).toFixed(0)}K`;
+      return pop.toLocaleString();
+    }
+
+    function showComputing(visible) {
+      $('computing-badge').classList.toggle('visible', visible);
+      if (visible) {
+        $('dest-info').classList.add('dest--faded');
+      }
+    }
+
+    // ===== Screens =====
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.hidden = true);
+      $(`screen-${name}`).hidden = false;
+    }
+
+    function showError(msg) {
+      $('error-message').textContent = msg;
+      showScreen('error');
+    }
+
+    // ===== Permissions =====
+    async function requestPermissions() {
+      $('loading-message').textContent = 'Getting your location...';
+      showScreen('loading');
+
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000,
+        });
+      });
+
+      state.userLat = position.coords.latitude;
+      state.userLng = position.coords.longitude;
+
+      $('loading-message').textContent = 'Enabling compass...';
+
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const response = await DeviceOrientationEvent.requestPermission();
+        if (response !== 'granted') {
+          throw new Error('Compass permission denied. Please allow motion access in Settings.');
+        }
+      }
+    }
+
+    function startCompass() {
+      console.log('[BTS] Starting compass...');
+      let gotOrientation = false;
+
+      function onOrientation(event) {
+        if (!gotOrientation) {
+          gotOrientation = true;
+          console.log('[BTS] Compass active');
+          const manual = $('manual-heading');
+          if (manual) manual.hidden = true;
+        }
+        handleOrientation(event);
+      }
+
+      if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', onOrientation, true);
+      }
+      window.addEventListener('deviceorientation', onOrientation, true);
+
+      // Desktop fallback
+      setTimeout(() => {
+        if (!gotOrientation) {
+          console.log('[BTS] No compass — showing slider');
+          const manual = $('manual-heading');
+          if (manual) manual.hidden = false;
+          state.heading = 270;
+          updateCompassDisplay(270);
+          scheduleLookup();
+        }
+      }, 2000);
+
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          state.userLat = pos.coords.latitude;
+          state.userLng = pos.coords.longitude;
+        },
+        null,
+        { enableHighAccuracy: true, maximumAge: 30000 }
+      );
+    }
+
+    // ===== Event Listeners =====
+    $('btn-start').addEventListener('click', async () => {
+      try {
+        await requestPermissions();
+        console.log(`[BTS] Location: ${state.userLat}, ${state.userLng}`);
+        showScreen('result');
+        startCompass();
+      } catch (err) {
+        if (err.code === 1) {
+          showError('Location permission denied. Please enable location access in your browser settings.');
+        } else if (err.code === 2) {
+          showError('Location unavailable. Please ensure GPS is enabled.');
+        } else if (err.code === 3) {
+          showError('Location request timed out. Please try again.');
+        } else {
+          showError(err.message || 'An unexpected error occurred.');
+        }
+      }
+    });
+
+    $('btn-retry').addEventListener('click', () => showScreen('welcome'));
+
+    $('heading-slider').addEventListener('input', (e) => {
+      const heading = parseInt(e.target.value, 10);
+      state.heading = heading;
+      updateCompassDisplay(heading);
+      scheduleLookup();
+    });
+  </script>
+</body>
+</html>

@@ -345,6 +345,7 @@
       margin: 10px auto 0;
       border-radius: 20px;
       overflow: hidden;
+      flex-shrink: 0;
       position: relative;
       background: var(--glass);
       border: 1px solid var(--white08);
@@ -437,14 +438,21 @@
     .dest--faded .dest-country,
     .dest--faded .dest-distance { opacity: 0.3; }
 
-    /* Description */
+    /* Description — scrollable box */
     .dest-description {
       width: calc(100% - 32px);
       max-width: 420px;
-      margin: 0 auto;
-      padding: 0 8px;
+      max-height: 150px;
+      margin: 10px auto 0;
+      padding: 10px 12px;
       text-align: left;
       z-index: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--glass);
+      border: 1px solid var(--white08);
+      border-radius: 14px;
+      flex-shrink: 0;
     }
     .dest-extract {
       font-size: 0.8rem;
@@ -518,6 +526,7 @@
       margin: 10px auto 0;
       border-radius: 16px;
       overflow: hidden;
+      flex-shrink: 0;
       border: 1px solid var(--white08);
       position: relative;
       z-index: 1;
@@ -1253,12 +1262,14 @@
 
     function updateCompassDisplay(heading) {
       const cardinal = getCardinal(heading);
+      // Needle N-pointer faces north: if user faces heading°, north is at -heading°
+      const needleAngle = 360 - heading;
       // Update pre-search compass (large)
-      $('compass-needle').style.transform = `rotate(${heading}deg)`;
+      $('compass-needle').style.transform = `rotate(${needleAngle}deg)`;
       $('heading-cardinal').textContent = cardinal;
       // Update post-search compass (small, in title bar)
       const sm = $('compass-needle-sm');
-      if (sm) sm.style.transform = `rotate(${heading}deg)`;
+      if (sm) sm.style.transform = `rotate(${needleAngle}deg)`;
       const cardSm = $('heading-cardinal-sm');
       if (cardSm) cardSm.textContent = cardinal;
       // Also sync the desktop slider if visible

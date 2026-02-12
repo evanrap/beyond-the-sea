@@ -407,19 +407,6 @@
       text-align: center;
       z-index: 1;
     }
-    .dest-inland-note {
-      display: none;
-      font-size: 0.75rem;
-      color: var(--coral);
-      background: rgba(255, 107, 107, 0.1);
-      border: 1px solid rgba(255, 107, 107, 0.25);
-      border-radius: 20px;
-      padding: 6px 16px;
-      margin: 0 auto 12px;
-      max-width: fit-content;
-      letter-spacing: 0.02em;
-      font-weight: 500;
-    }
     .dest--faded {
       opacity: 0.4;
       transition: opacity 0.3s ease;
@@ -758,7 +745,6 @@
 
         <!-- Destination Info -->
         <div id="dest-info" class="dest-info">
-          <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
           <h2 id="dest-name" class="dest-name">Searching...</h2>
           <p id="dest-country" class="dest-country"></p>
           <p id="dest-distance" class="dest-distance"></p>
@@ -1097,11 +1083,12 @@
     }
 
     async function getPlaceInfo(lat, lng) {
-      // Step 1: Find the nearest place (any size) within 10km — this correctly names
-      // islands, small towns, and features right at the landfall point without
-      // picking up distant mainland cities
+      // Step 1: Find the nearest named place (any size) within 50km.
+      // Results are sorted by distance, so geonames[0] is the closest.
+      // This correctly names islands (e.g. Santa Rosa Island, Catalina)
+      // because the island's named point is closer than mainland cities.
       try {
-        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&radius=10&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=50&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
         if (data.geonames && data.geonames.length > 0) {
           const nearest = data.geonames[0];
@@ -1110,18 +1097,7 @@
         }
       } catch (e) { /* fall through */ }
 
-      // Step 2: Try notable cities within 300km (for remote coastlines)
-      try {
-        const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=10&radius=300&cities=cities5000&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
-        const data = await requestQueue.request(url);
-        if (data.geonames && data.geonames.length > 0) {
-          const scored = scorePlaces(data.geonames);
-          console.log('[BTS] City candidates:', scored.map(s => `${s.place.name} (pop ${s.place.population}, ${parseFloat(s.place.distance).toFixed(0)}km, score ${s.score.toFixed(2)})`).join(', '));
-          return buildPlaceResult(scored[0].place);
-        }
-      } catch (e) { /* fall through */ }
-
-      // Step 3: Any nearby place with wider radius
+      // Step 2: Wider search for remote coastlines (300km, any place)
       try {
         const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=300&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
@@ -1198,7 +1174,6 @@
       const maxDist = CONFIG.RAY_MAX_KM;
 
       // Single-pass scan: bitmap lookups are instant (~1ms for 1000 steps)
-      let startsOnLand = false;
       let sawWater = false;
       let lastWaterDist = 0;
       let firstLandPoint = null;
@@ -1206,12 +1181,6 @@
       for (let d = step; d <= maxDist; d += step) {
         const pt = computeDestination(lat, lng, bearingDeg, d);
         const isLand = checkIsLand(pt.lat, pt.lng);
-
-        // First sample: check if ray starts on land (inland detection)
-        if (d === step) {
-          startsOnLand = isLand;
-          if (startsOnLand) console.log('[BTS] Ray starts on land — will flag as inland');
-        }
 
         if (isLand) {
           if (sawWater) {
@@ -1244,14 +1213,13 @@
       ]);
 
       const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-      console.log(`[BTS] Result: ${placeInfo.name}, ${placeInfo.country} at ${Math.round(firstLandPoint.dist)}km across ${oceanName}${startsOnLand ? ' (facing inland)' : ''} [${elapsed}s]`);
+      console.log(`[BTS] Result: ${placeInfo.name}, ${placeInfo.country} at ${Math.round(firstLandPoint.dist)}km across ${oceanName} [${elapsed}s]`);
 
       return {
         lat: firstLandPoint.lat,
         lng: firstLandPoint.lng,
         distanceKm: Math.round(firstLandPoint.dist),
         oceanName,
-        inland: startsOnLand,
         ...placeInfo,
       };
     }
@@ -1364,19 +1332,11 @@
       }
 
       if (result.error === 'FACING_INLAND') {
-        setDestination('Facing Inland', 'Turn toward the water', '');
-        $('dest-inland-note').style.display = 'none';
+        setDestination('No water found', 'Try a different direction', '');
         hideExtras();
         hideMap();
         showPlaceholderPhoto('&#x26F0;');
         return;
-      }
-
-      // Show or hide inland note
-      if (result.inland) {
-        $('dest-inland-note').style.display = 'block';
-      } else {
-        $('dest-inland-note').style.display = 'none';
       }
 
       // Set main destination info
@@ -1487,7 +1447,6 @@
       $('ocean-badge').style.display = 'none';
       $('dest-description').style.display = 'none';
       $('facts-grid').style.display = 'none';
-      $('dest-inland-note').style.display = 'none';
     }
 
     function formatDistance(km) {

@@ -209,6 +209,32 @@
       min-width: 30px;
     }
 
+    /* Search Button */
+    .search-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 8px auto 0;
+      padding: 12px 32px;
+      border: none;
+      border-radius: 50px;
+      background: var(--teal);
+      color: var(--navy);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      z-index: 10;
+    }
+    .search-btn:active { transform: scale(0.95); }
+    .search-btn:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
     /* Computing Badge */
     .computing-badge {
       display: none;
@@ -238,8 +264,8 @@
     .hero-photo {
       width: calc(100% - 32px);
       max-width: 420px;
-      aspect-ratio: 16 / 10;
-      margin: 16px auto 0;
+      aspect-ratio: 4 / 3;
+      margin: 10px auto 0;
       border-radius: 20px;
       overflow: hidden;
       position: relative;
@@ -280,7 +306,7 @@
     .dest-info {
       width: 100%;
       max-width: 420px;
-      padding: 20px 24px 0;
+      padding: 10px 24px 0;
       text-align: center;
       z-index: 1;
     }
@@ -311,26 +337,26 @@
     }
     .dest-name {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: 400;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       transition: opacity 0.3s ease;
       line-height: 1.2;
     }
     .dest-country {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--white70);
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       font-weight: 400;
     }
     .dest-distance {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: var(--teal);
       font-weight: 500;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
     .dest-distance svg {
       width: 16px; height: 16px;
@@ -352,11 +378,11 @@
       z-index: 1;
     }
     .dest-extract {
-      font-size: 0.85rem;
-      line-height: 1.65;
+      font-size: 0.8rem;
+      line-height: 1.55;
       color: var(--white70);
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
       transition: opacity 0.3s ease;
@@ -365,18 +391,18 @@
     /* Fun Facts Grid */
     .facts-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
       width: calc(100% - 32px);
       max-width: 420px;
-      margin: 16px auto;
+      margin: 10px auto;
       z-index: 1;
     }
     .fact-card {
       background: var(--glass);
       border: 1px solid var(--white08);
       border-radius: 14px;
-      padding: 14px 16px;
+      padding: 10px 12px;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: opacity 0.3s ease;
@@ -423,8 +449,8 @@
     .route-map-container {
       width: calc(100% - 32px);
       max-width: 420px;
-      height: 200px;
-      margin: 12px auto 0;
+      height: 260px;
+      margin: 10px auto 0;
       border-radius: 16px;
       overflow: hidden;
       border: 1px solid var(--white08);
@@ -566,6 +592,11 @@
         <span id="heading-cardinal" class="heading-cardinal">--</span>
       </div>
 
+      <button id="btn-search" class="search-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        Search
+      </button>
+
       <div id="computing-badge" class="computing-badge">
         <span class="computing-dot"></span>
         <span>Searching across the water...</span>
@@ -605,10 +636,6 @@
 
       <!-- Fun Facts Grid -->
       <div id="facts-grid" class="facts-grid" style="display:none">
-        <div class="fact-card" id="fact-population">
-          <div class="fact-label">Population</div>
-          <div class="fact-value" id="fact-pop-value">--</div>
-        </div>
         <div class="fact-card" id="fact-timezone">
           <div class="fact-label">Local Time</div>
           <div class="fact-value fact-value--small" id="fact-tz-value">--</div>
@@ -1085,7 +1112,7 @@
       }
       state.heading = Math.round(heading);
       updateCompassDisplay(state.heading);
-      scheduleLookup();
+      // Don't auto-search — user taps the Search button
     }
 
     function updateCompassDisplay(heading) {
@@ -1241,13 +1268,6 @@
     function showFacts(result) {
       $('facts-grid').style.display = '';
 
-      // Population
-      if (result.population && result.population > 0) {
-        $('fact-pop-value').textContent = formatPopulation(result.population);
-      } else {
-        $('fact-pop-value').textContent = '--';
-      }
-
       // Local time
       if (result.timezone) {
         try {
@@ -1297,6 +1317,7 @@
 
     function showComputing(visible) {
       $('computing-badge').classList.toggle('visible', visible);
+      $('btn-search').disabled = visible;
       if (visible) {
         $('dest-info').classList.add('dest--faded');
       }
@@ -1367,7 +1388,6 @@
           if (manual) manual.hidden = false;
           state.heading = 270;
           updateCompassDisplay(270);
-          scheduleLookup();
         }
       }, 2000);
 
@@ -1403,11 +1423,16 @@
 
     $('btn-retry').addEventListener('click', () => showScreen('welcome'));
 
+    $('btn-search').addEventListener('click', () => {
+      if (state.heading === null) return;
+      const bucket = Math.round(state.heading / CONFIG.HEADING_BUCKET_DEG) * CONFIG.HEADING_BUCKET_DEG;
+      triggerComputation(bucket);
+    });
+
     $('heading-slider').addEventListener('input', (e) => {
       const heading = parseInt(e.target.value, 10);
       state.heading = heading;
       updateCompassDisplay(heading);
-      scheduleLookup();
     });
   </script>
 </body>

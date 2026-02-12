@@ -209,30 +209,49 @@
       gap: 10px;
       margin-bottom: 32px;
     }
-    .pre-search__compass-ring {
+    .pre-search__compass-outer {
       position: relative;
-      width: 140px;
-      height: 140px;
+      width: 200px;
+      height: 200px;
+    }
+    .pre-search__compass-ring {
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
-      border: 1.5px solid var(--white15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border: 2px solid var(--white15);
+      transition: transform 0.3s ease;
     }
     .pre-search__tick {
       position: absolute;
-      font-size: 0.65rem;
+      font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.05em;
       color: var(--white40);
     }
-    .pre-search__tick--n { top: 8px; left: 50%; transform: translateX(-50%); color: var(--teal); }
-    .pre-search__tick--s { bottom: 8px; left: 50%; transform: translateX(-50%); }
-    .pre-search__tick--e { right: 8px; top: 50%; transform: translateY(-50%); }
-    .pre-search__tick--w { left: 8px; top: 50%; transform: translateY(-50%); }
+    .pre-search__tick--n { top: 10px; left: 50%; transform: translateX(-50%); color: var(--teal); font-size: 0.85rem; }
+    .pre-search__tick--s { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .pre-search__tick--e { right: 10px; top: 50%; transform: translateY(-50%); }
+    .pre-search__tick--w { left: 10px; top: 50%; transform: translateY(-50%); }
+    /* Fixed heading arrow — always points UP (= user's facing direction) */
+    .pre-search__heading-arrow {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      color: var(--teal);
+      font-size: 1.6rem;
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    }
     .compass-needle--large {
-      width: 56px;
-      height: 56px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 110px;
+      height: 110px;
+      /* Needle also rotates with ring to always point north */
     }
     .heading-cardinal--large {
       font-size: 1rem;
@@ -673,16 +692,22 @@
         <p class="pre-search__subtitle">Face the direction you want to explore</p>
 
         <div class="pre-search__compass">
-          <div class="pre-search__compass-ring">
-            <span class="pre-search__tick pre-search__tick--n">N</span>
-            <span class="pre-search__tick pre-search__tick--e">E</span>
-            <span class="pre-search__tick pre-search__tick--s">S</span>
-            <span class="pre-search__tick pre-search__tick--w">W</span>
-            <div id="compass-needle" class="compass-needle compass-needle--large">
-              <svg viewBox="0 0 24 24" fill="none">
-                <polygon points="12,2 15,12 12,10 9,12" fill="#4ecdc4"/>
-                <polygon points="12,22 9,12 12,14 15,12" fill="rgba(255,255,255,0.25)"/>
-              </svg>
+          <div class="pre-search__compass-outer">
+            <!-- Fixed arrow at top showing user's facing direction -->
+            <div class="pre-search__heading-arrow">&#x25B2;</div>
+            <!-- Rotating ring: ring + labels + needle all rotate together -->
+            <div id="compass-ring" class="pre-search__compass-ring">
+              <span class="pre-search__tick pre-search__tick--n">N</span>
+              <span class="pre-search__tick pre-search__tick--e">E</span>
+              <span class="pre-search__tick pre-search__tick--s">S</span>
+              <span class="pre-search__tick pre-search__tick--w">W</span>
+              <div id="compass-needle" class="compass-needle compass-needle--large">
+                <svg viewBox="0 0 100 100" fill="none">
+                  <polygon points="50,5 62,50 50,42 38,50" fill="#4ecdc4"/>
+                  <polygon points="50,95 38,50 50,58 62,50" fill="rgba(255,255,255,0.2)"/>
+                  <circle cx="50" cy="50" r="4" fill="rgba(255,255,255,0.5)"/>
+                </svg>
+              </div>
             </div>
           </div>
           <span id="heading-cardinal" class="heading-cardinal heading-cardinal--large">--</span>
@@ -1240,8 +1265,10 @@
     function handleOrientation(event) {
       let raw;
       if (event.webkitCompassHeading !== undefined) {
+        // iOS: webkitCompassHeading = degrees from magnetic north
         raw = event.webkitCompassHeading;
       } else if (event.alpha !== null) {
+        // Android: alpha = counterclockwise degrees from north (for absolute events)
         raw = (360 - event.alpha) % 360;
       } else {
         return;
@@ -1262,14 +1289,16 @@
 
     function updateCompassDisplay(heading) {
       const cardinal = getCardinal(heading);
-      // Needle N-pointer faces north: if user faces heading°, north is at -heading°
-      const needleAngle = 360 - heading;
-      // Update pre-search compass (large)
-      $('compass-needle').style.transform = `rotate(${needleAngle}deg)`;
+      // Rotate the entire ring so N label points to actual north
+      // (user faces heading°, so north is at -heading° from top of screen)
+      const ringAngle = -heading;
+      const ring = $('compass-ring');
+      if (ring) ring.style.transform = `rotate(${ringAngle}deg)`;
+      // Cardinal text label (not rotated)
       $('heading-cardinal').textContent = cardinal;
-      // Update post-search compass (small, in title bar)
+      // Update post-search compass (small needle in title bar)
       const sm = $('compass-needle-sm');
-      if (sm) sm.style.transform = `rotate(${needleAngle}deg)`;
+      if (sm) sm.style.transform = `rotate(${ringAngle}deg)`;
       const cardSm = $('heading-cardinal-sm');
       if (cardSm) cardSm.textContent = cardinal;
       // Also sync the desktop slider if visible
@@ -1525,17 +1554,29 @@
     function startCompass() {
       console.log('[BTS] Starting compass...');
       let gotOrientation = false;
+      let hasAbsolute = false;
 
-      function onOrientation(event) {
+      function onAbsoluteOrientation(event) {
         if (!gotOrientation) {
           gotOrientation = true;
-          console.log('[BTS] Compass active');
+          hasAbsolute = true;
+          console.log('[BTS] Compass active (absolute)');
+        }
+        handleOrientation(event);
+      }
+
+      function onOrientation(event) {
+        // On Android, ignore non-absolute events if we have absolute ones
+        if (hasAbsolute) return;
+        if (!gotOrientation) {
+          gotOrientation = true;
+          console.log('[BTS] Compass active (relative)');
         }
         handleOrientation(event);
       }
 
       if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', onOrientation, true);
+        window.addEventListener('deviceorientationabsolute', onAbsoluteOrientation, true);
       }
       window.addEventListener('deviceorientation', onOrientation, true);
 

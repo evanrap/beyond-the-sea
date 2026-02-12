@@ -822,7 +822,7 @@
       RAY_STEP_KM: 25,
       RAY_MAX_KM: 25000,
       HEADING_DEBOUNCE_MS: 500,
-      HEADING_BUCKET_DEG: 5,
+      HEADING_BUCKET_DEG: 1,
       CACHE_TTL_MS: 300000,
       EARTH_RADIUS_KM: 6371,
       REQUEST_MIN_INTERVAL_MS: 100,
@@ -1137,24 +1137,86 @@
     }
 
     // ===== Wikipedia API =====
-    async function getWikipediaInfo(placeName, countryName) {
-      const cacheKey = `${placeName}|${countryName}`;
+    const WIKI_IMAGE_BLOCKLIST = /flag|coat.of.arms|seal_of|logo|icon|emblem|map_of|diagram|symbol|insignia|coa_|escudo|blason|wappen|armoiries|stemma|shield|banner|wikisource|wikimedia|commons-logo|edit-clear|text-x|folder-|ambox|question_book|globe_content|merger/i;
+    const WIKI_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
+
+    async function getWikipediaPhoto(title) {
+      try {
+        const imagesUrl = `${CONFIG.WIKIPEDIA_API}?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=20&format=json&origin=*`;
+        const imagesData = await (await window.fetch(imagesUrl)).json();
+        const pages = imagesData.query ? imagesData.query.pages : {};
+        const pageId = Object.keys(pages)[0];
+        if (!pageId || pageId === '-1' || !pages[pageId].images) return null;
+
+        // Filter to likely photos: raster images with non-blocklisted filenames
+        const candidates = pages[pageId].images
+          .map(img => img.title)
+          .filter(name => WIKI_IMAGE_EXTENSIONS.test(name))
+          .filter(name => !WIKI_IMAGE_BLOCKLIST.test(name));
+
+        if (candidates.length === 0) return null;
+        console.log('[BTS] Photo candidates:', candidates.slice(0, 3).join(', '));
+
+        // Get thumbnail URL for the first qualifying image
+        const fileTitle = candidates[0];
+        const thumbUrl = `${CONFIG.WIKIPEDIA_API}?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`;
+        const thumbData = await (await window.fetch(thumbUrl)).json();
+        const thumbPages = thumbData.query ? thumbData.query.pages : {};
+        const thumbPageId = Object.keys(thumbPages)[0];
+        if (!thumbPageId || thumbPageId === '-1') return null;
+
+        const imageinfo = thumbPages[thumbPageId].imageinfo;
+        if (imageinfo && imageinfo.length > 0) {
+          return imageinfo[0].thumburl || imageinfo[0].url;
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function getWikipediaInfo(placeName, countryName, lat, lng, region) {
+      const cacheKey = `${placeName}|${countryName}|${lat != null ? lat.toFixed(2) : ''}|${lng != null ? lng.toFixed(2) : ''}`;
       if (wikiCache.has(cacheKey)) return wikiCache.get(cacheKey);
 
       try {
-        // Search for the place to get the right article title
-        const searchQuery = `${placeName} ${countryName} city`;
-        const searchUrl = `${CONFIG.WIKIPEDIA_API}?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srlimit=1&format=json&origin=*`;
-        const searchData = await (await window.fetch(searchUrl)).json();
-
         let title = placeName;
-        if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
-          title = searchData.query.search[0].title;
+
+        // Phase 1: Coordinate-based geosearch (most accurate for disambiguation)
+        if (lat != null && lng != null) {
+          try {
+            const geoUrl = `${CONFIG.WIKIPEDIA_API}?action=query&list=geosearch&gscoord=${lat}|${lng}&gsradius=10000&gslimit=5&format=json&origin=*`;
+            const geoData = await (await window.fetch(geoUrl)).json();
+            if (geoData.query && geoData.query.geosearch && geoData.query.geosearch.length > 0) {
+              const results = geoData.query.geosearch;
+              // Prefer an article whose title contains the place name
+              const nameMatch = results.find(
+                r => r.title.toLowerCase().includes(placeName.toLowerCase())
+              );
+              title = nameMatch ? nameMatch.title : results[0].title;
+              console.log('[BTS] Geosearch hit:', title, nameMatch ? '(name match)' : '(closest)');
+            }
+          } catch (e) { /* fall through to text search */ }
         }
 
-        // Get page info with thumbnail and extract
+        // Phase 2: Text search fallback with region disambiguation
+        if (title === placeName) {
+          const regionPart = region ? ` ${region}` : '';
+          const searchQuery = `${placeName}${regionPart} ${countryName}`;
+          const searchUrl = `${CONFIG.WIKIPEDIA_API}?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srlimit=1&format=json&origin=*`;
+          const searchData = await (await window.fetch(searchUrl)).json();
+          if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+            title = searchData.query.search[0].title;
+            console.log('[BTS] Text search fallback:', title);
+          }
+        }
+
+        // Get page extract + filtered photo in parallel
         const infoUrl = `${CONFIG.WIKIPEDIA_API}?action=query&titles=${encodeURIComponent(title)}&prop=extracts|pageimages&exintro&explaintext&piprop=thumbnail&pithumbsize=600&format=json&origin=*`;
-        const infoData = await (await window.fetch(infoUrl)).json();
+        const [infoData, filteredPhoto] = await Promise.all([
+          (await window.fetch(infoUrl)).json(),
+          getWikipediaPhoto(title),
+        ]);
 
         const pages = infoData.query ? infoData.query.pages : {};
         const pageId = Object.keys(pages)[0];
@@ -1165,8 +1227,18 @@
         }
 
         const page = pages[pageId];
+
+        // Prefer filtered photo; fall back to pageimage only if it's not a flag/seal
+        let thumbnail = filteredPhoto;
+        if (!thumbnail && page.thumbnail) {
+          const fallbackUrl = page.thumbnail.source;
+          if (!WIKI_IMAGE_BLOCKLIST.test(decodeURIComponent(fallbackUrl))) {
+            thumbnail = fallbackUrl;
+          }
+        }
+
         const result = {
-          thumbnail: page.thumbnail ? page.thumbnail.source : null,
+          thumbnail,
           extract: page.extract || null,
           title: page.title,
         };
@@ -1378,7 +1450,7 @@
       if (result.name !== state.currentResultName) {
         state.currentResultName = result.name;
         showPlaceholderPhoto('&#x1F30D;');
-        getWikipediaInfo(result.name, result.country).then(wiki => {
+        getWikipediaInfo(result.name, result.country, result.lat, result.lng, result.region).then(wiki => {
           // Check we're still showing the same result
           if (state.currentResultName !== result.name) return;
 

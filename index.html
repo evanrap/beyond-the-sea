@@ -1083,10 +1083,25 @@
     }
 
     async function getPlaceInfo(lat, lng) {
-      // Step 1: Find the nearest named place (any size) within 50km.
-      // Results are sorted by distance, so geonames[0] is the closest.
-      // This correctly names islands (e.g. Santa Rosa Island, Catalina)
-      // because the island's named point is closer than mainland cities.
+      // Step 1: Check for geographic features (islands, peninsulas, etc.)
+      // findNearbyJSON searches ALL feature classes, not just populated places.
+      // Islands are feature class T with fcode ISL/ISLS/ISLET — these are
+      // invisible to findNearbyPlaceNameJSON which only returns class P.
+      const ISLAND_CODES = new Set(['ISL', 'ISLS', 'ISLET', 'ATOL']);
+      try {
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const data = await requestQueue.request(url);
+        if (data.geonames && data.geonames.length > 0) {
+          // Check if any nearby feature is an island
+          const island = data.geonames.find(f => ISLAND_CODES.has(f.fcode));
+          if (island) {
+            console.log('[BTS] Island detected:', island.name, `(${parseFloat(island.distance).toFixed(1)}km, fcode ${island.fcode})`);
+            return buildPlaceResult(island);
+          }
+        }
+      } catch (e) { /* fall through */ }
+
+      // Step 2: Nearest populated place within 50km
       try {
         const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=50&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
@@ -1097,7 +1112,7 @@
         }
       } catch (e) { /* fall through */ }
 
-      // Step 2: Wider search for remote coastlines (300km, any place)
+      // Step 3: Wider search for remote coastlines (300km)
       try {
         const url = `${CONFIG.GEONAMES_BASE}/findNearbyPlaceNameJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=1&radius=300&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);

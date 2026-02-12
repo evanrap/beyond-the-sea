@@ -176,37 +176,22 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* Compass Bar */
-    .compass-bar {
+    /* App Title Bar */
+    .app-title-bar {
       position: sticky;
       top: 0;
       width: 100%;
-      padding: calc(var(--safe-top) + 12px) 20px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      padding: calc(var(--safe-top) + 10px) 20px 10px;
+      text-align: center;
       background: linear-gradient(180deg, var(--deep) 0%, rgba(7,15,27,0.95) 60%, transparent 100%);
       z-index: 10;
     }
-    .compass-icon {
-      width: 24px; height: 24px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.3s ease;
-    }
-    .compass-icon svg { width: 100%; height: 100%; }
-    .heading-deg {
+    .app-title-bar h1 {
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: 1.15rem;
-      font-weight: 300;
-      font-variant-numeric: tabular-nums;
-    }
-    .heading-cardinal {
-      font-size: 0.8rem;
-      color: var(--teal);
-      font-weight: 600;
-      min-width: 30px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--white);
     }
 
     /* Search Button */
@@ -310,14 +295,6 @@
       text-align: center;
       z-index: 1;
     }
-    .dest-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.25em;
-      color: var(--white40);
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
     .dest-inland-note {
       display: none;
       font-size: 0.75rem;
@@ -381,10 +358,6 @@
       font-size: 0.8rem;
       line-height: 1.55;
       color: var(--white70);
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
       transition: opacity 0.3s ease;
     }
 
@@ -429,7 +402,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin: 0 auto 16px;
+      margin: 4px auto 0;
       padding: 6px 16px;
       background: rgba(78,205,196,0.08);
       border: 1px solid rgba(78,205,196,0.15);
@@ -581,15 +554,8 @@
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen result-screen" hidden>
-      <div class="compass-bar">
-        <div id="compass-icon" class="compass-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="12,2 15,14 12,11 9,14" fill="#4ecdc4" stroke="#4ecdc4"/>
-            <polygon points="12,22 9,14 12,17 15,14" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.3)"/>
-          </svg>
-        </div>
-        <span id="heading-display" class="heading-deg">---&deg;</span>
-        <span id="heading-cardinal" class="heading-cardinal">--</span>
+      <div class="app-title-bar">
+        <h1>Beyond the Sea</h1>
       </div>
 
       <button id="btn-search" class="search-btn">
@@ -600,6 +566,19 @@
       <div id="computing-badge" class="computing-badge">
         <span class="computing-dot"></span>
         <span>Searching across the water...</span>
+      </div>
+
+      <!-- Destination Info (above photo for immediate visibility) -->
+      <div id="dest-info" class="dest-info">
+        <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
+        <h2 id="dest-name" class="dest-name">Searching...</h2>
+        <p id="dest-country" class="dest-country"></p>
+        <p id="dest-distance" class="dest-distance"></p>
+        <!-- Ocean Badge (inside dest-info) -->
+        <div id="ocean-badge" class="ocean-badge" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M2,12 C4,8 6,16 8,12 C10,8 12,16 14,12 C16,8 18,16 20,12 C22,8 24,12 24,12"/></svg>
+          <span id="ocean-name">Pacific Ocean</span>
+        </div>
       </div>
 
       <!-- Hero Photo -->
@@ -614,27 +593,7 @@
         <div id="route-map"></div>
       </div>
 
-      <!-- Destination Info -->
-      <div id="dest-info" class="dest-info">
-        <p class="dest-label">Across the water</p>
-        <p id="dest-inland-note" class="dest-inland-note">You're facing inland — beyond the next water:</p>
-        <h2 id="dest-name" class="dest-name">Searching...</h2>
-        <p id="dest-country" class="dest-country"></p>
-        <p id="dest-distance" class="dest-distance"></p>
-      </div>
-
-      <!-- Ocean Badge -->
-      <div id="ocean-badge" class="ocean-badge" style="display:none">
-        <svg viewBox="0 0 24 24"><path d="M2,12 C4,8 6,16 8,12 C10,8 12,16 14,12 C16,8 18,16 20,12 C22,8 24,12 24,12"/></svg>
-        <span id="ocean-name">Pacific Ocean</span>
-      </div>
-
-      <!-- Description -->
-      <div id="dest-description" class="dest-description" style="display:none">
-        <p id="dest-extract" class="dest-extract"></p>
-      </div>
-
-      <!-- Fun Facts Grid -->
+      <!-- Fun Facts Grid (below map) -->
       <div id="facts-grid" class="facts-grid" style="display:none">
         <div class="fact-card" id="fact-timezone">
           <div class="fact-label">Local Time</div>
@@ -648,6 +607,11 @@
           <div class="fact-label">Continent</div>
           <div class="fact-value fact-value--small" id="fact-continent-value">--</div>
         </div>
+      </div>
+
+      <!-- Description (at bottom, fully scrollable) -->
+      <div id="dest-description" class="dest-description" style="display:none">
+        <p id="dest-extract" class="dest-extract"></p>
       </div>
 
       <!-- Manual Heading (desktop fallback) -->
@@ -694,6 +658,7 @@
       CACHE_TTL_MS: 300000,
       EARTH_RADIUS_KM: 6371,
       REQUEST_MIN_INTERVAL_MS: 100,
+      HEADING_SMOOTHING: 0.15,
     };
 
     const CONTINENT_NAMES = {
@@ -748,6 +713,7 @@
       userLat: null,
       userLng: null,
       heading: null,
+      smoothedHeading: null,
       lastQueriedBucket: null,
       isComputing: false,
       currentResultName: null,
@@ -1096,29 +1062,35 @@
     }
 
     // ===== Compass =====
-    function getCardinal(deg) {
-      const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-      return dirs[Math.round(deg / 22.5) % 16];
-    }
-
     function handleOrientation(event) {
-      let heading;
+      let raw;
       if (event.webkitCompassHeading !== undefined) {
-        heading = event.webkitCompassHeading;
+        raw = event.webkitCompassHeading;
       } else if (event.alpha !== null) {
-        heading = (360 - event.alpha) % 360;
+        raw = (360 - event.alpha) % 360;
       } else {
         return;
       }
-      state.heading = Math.round(heading);
+      // Exponential moving average with circular-aware blending
+      if (state.smoothedHeading === null) {
+        state.smoothedHeading = raw;
+      } else {
+        let diff = raw - state.smoothedHeading;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        state.smoothedHeading = (state.smoothedHeading + CONFIG.HEADING_SMOOTHING * diff + 360) % 360;
+      }
+      state.heading = Math.round(state.smoothedHeading);
       updateCompassDisplay(state.heading);
       // Don't auto-search — user taps the Search button
     }
 
     function updateCompassDisplay(heading) {
-      $('heading-display').textContent = `${heading}\u00B0`;
-      $('heading-cardinal').textContent = getCardinal(heading);
-      $('compass-icon').style.transform = `rotate(${heading}deg)`;
+      // Compass bar removed; only update desktop slider display if visible
+      const slider = $('heading-slider');
+      if (slider && !slider.parentElement.hidden) {
+        slider.value = heading;
+      }
     }
 
     // ===== Debounce & Cache =====
@@ -1185,13 +1157,11 @@
         return;
       }
 
-      // Show or hide inland note and update label
+      // Show or hide inland note
       if (result.inland) {
         $('dest-inland-note').style.display = 'block';
-        document.querySelector('.dest-label').textContent = 'Beyond the next water';
       } else {
         $('dest-inland-note').style.display = 'none';
-        document.querySelector('.dest-label').textContent = 'Across the water';
       }
 
       // Set main destination info

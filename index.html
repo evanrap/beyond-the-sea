@@ -1089,7 +1089,7 @@
       // invisible to findNearbyPlaceNameJSON which only returns class P.
       const ISLAND_CODES = new Set(['ISL', 'ISLS', 'ISLET', 'ATOL']);
       try {
-        const url = `${CONFIG.GEONAMES_BASE}/findNearbyJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=5&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
+        const url = `${CONFIG.GEONAMES_BASE}/findNearbyJSON?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&maxRows=10&radius=50&style=FULL&username=${CONFIG.GEONAMES_USERNAME}`;
         const data = await requestQueue.request(url);
         if (data.geonames && data.geonames.length > 0) {
           // Check if any nearby feature is an island
@@ -1137,7 +1137,7 @@
     }
 
     // ===== Wikipedia API =====
-    const WIKI_IMAGE_BLOCKLIST = /flag|coat.of.arms|seal_of|logo|icon|emblem|map_of|diagram|symbol|insignia|coa_|escudo|blason|wappen|armoiries|stemma|shield|banner|wikisource|wikimedia|commons-logo|edit-clear|text-x|folder-|ambox|question_book|globe_content|merger/i;
+    const WIKI_IMAGE_BLOCKLIST = /^File:(Flag_of_|Coat_of_arms_|Seal_of_|Logo_of_|Emblem_of_|Escudo_de_|Blason_d|Wappen_|Armoiries_|Stemma_|Map_of_|Insignia_of_|Banner_of_|Shield_of_)/i;
     const WIKI_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
     async function getWikipediaPhoto(title) {
@@ -1228,13 +1228,10 @@
 
         const page = pages[pageId];
 
-        // Prefer filtered photo; fall back to pageimage only if it's not a flag/seal
+        // Prefer filtered photo; fall back to pageimage if filtering found nothing
         let thumbnail = filteredPhoto;
         if (!thumbnail && page.thumbnail) {
-          const fallbackUrl = page.thumbnail.source;
-          if (!WIKI_IMAGE_BLOCKLIST.test(decodeURIComponent(fallbackUrl))) {
-            thumbnail = fallbackUrl;
-          }
+          thumbnail = page.thumbnail.source;
         }
 
         const result = {

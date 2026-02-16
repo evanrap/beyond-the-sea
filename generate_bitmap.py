@@ -3,7 +3,7 @@
 Generate a land/water bitmap for Beyond the Sea.
 
 Uses Natural Earth low-res land polygons (bundled with geopandas) to create
-a 720x1440 (0.25 degree) grid. Output is a bitpacked, RLE-compressed,
+a 1800x3600 (0.1 degree) grid. Output is a bitpacked, RLE-compressed,
 base64-encoded JavaScript constant ready to embed in index.html.
 
 Usage:
@@ -61,7 +61,7 @@ def generate_grid(rows=720, cols=1440, res=0.25):
                 grid[row, col] = 1
 
         checked += cols
-        if (row + 1) % 72 == 0:
+        if (row + 1) % 180 == 0:
             elapsed = time.time() - t0
             pct = checked / total * 100
             rate = checked / elapsed if elapsed > 0 else 0
@@ -138,7 +138,7 @@ def rle_encode(data):
 
 
 def main():
-    rows, cols, res = 720, 1440, 0.25
+    rows, cols, res = 1800, 3600, 0.1
 
     grid = generate_grid(rows, cols, res)
     validate_grid(grid, res)

@@ -59,7 +59,7 @@
     .waves {
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      height: 200px;
+      height: 240px;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -91,6 +91,19 @@
     }
 
     /* ===== Welcome Screen ===== */
+    #screen-welcome {
+      position: relative;
+    }
+    #screen-welcome::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 60%, rgba(78,205,196,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 85%, rgba(15,43,74,0.5) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
     .welcome-content {
       text-align: center;
       padding: 0 40px;
@@ -98,11 +111,12 @@
     }
     .welcome-title {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 2.6rem;
+      font-size: 3.2rem;
       font-weight: 400;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       margin-bottom: 8px;
       line-height: 1.2;
+      text-shadow: 0 0 80px rgba(78,205,196,0.2), 0 2px 4px rgba(0,0,0,0.3);
     }
     .welcome-subtitle {
       font-size: 0.8rem;
@@ -111,13 +125,14 @@
       color: var(--teal);
       margin-bottom: 28px;
       font-weight: 500;
+      text-shadow: 0 0 30px rgba(78,205,196,0.15);
     }
     .welcome-desc {
-      font-size: 1rem;
+      font-size: 0.9rem;
       line-height: 1.7;
-      color: var(--white70);
+      color: var(--white40);
       margin-bottom: 44px;
-      max-width: 320px;
+      max-width: 340px;
     }
 
     /* ===== Buttons ===== */
@@ -138,9 +153,25 @@
     }
     .btn:active { transform: scale(0.96); }
     .btn--primary {
-      background: var(--teal);
-      color: var(--navy);
-      box-shadow: 0 4px 24px rgba(78,205,196,0.25);
+      background: linear-gradient(135deg, #4ecdc4, #44b5ad);
+      color: var(--deep);
+      width: 240px;
+      height: 54px;
+      border-radius: 27px;
+      font-size: 1rem;
+      font-weight: 600;
+      box-shadow: 0 4px 30px rgba(78,205,196,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn--primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 3s ease-in-out infinite;
+      pointer-events: none;
     }
     .btn--secondary {
       background: var(--white15);

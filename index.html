@@ -59,7 +59,7 @@
     .waves {
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      height: 240px;
+      height: 260px;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -99,8 +99,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse at 50% 60%, rgba(78,205,196,0.07) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 85%, rgba(15,43,74,0.5) 0%, transparent 60%);
+        radial-gradient(ellipse at 50% 45%, rgba(78,205,196,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 80%, rgba(15,43,74,0.6) 0%, transparent 55%);
       pointer-events: none;
       z-index: 0;
     }
@@ -108,31 +108,36 @@
       text-align: center;
       padding: 0 40px;
       z-index: 1;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%);
+      width: 100%;
     }
     .welcome-title {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 3.2rem;
+      font-size: 3.4rem;
       font-weight: 400;
       letter-spacing: 0.06em;
-      margin-bottom: 8px;
-      line-height: 1.2;
-      text-shadow: 0 0 80px rgba(78,205,196,0.2), 0 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 12px;
+      line-height: 1.15;
+      text-shadow: 0 0 80px rgba(78,205,196,0.25), 0 2px 4px rgba(0,0,0,0.3);
     }
     .welcome-subtitle {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.25em;
+      letter-spacing: 0.28em;
       color: var(--teal);
-      margin-bottom: 28px;
+      margin-bottom: 32px;
       font-weight: 500;
       text-shadow: 0 0 30px rgba(78,205,196,0.15);
     }
     .welcome-desc {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       line-height: 1.7;
       color: var(--white40);
-      margin-bottom: 44px;
-      max-width: 340px;
+      margin: 0 auto 48px;
+      max-width: 300px;
     }
 
     /* ===== Buttons ===== */
@@ -155,9 +160,9 @@
     .btn--primary {
       background: linear-gradient(135deg, #4ecdc4, #44b5ad);
       color: var(--deep);
-      width: 240px;
-      height: 54px;
-      border-radius: 27px;
+      width: 220px;
+      height: 52px;
+      border-radius: 26px;
       font-size: 1rem;
       font-weight: 600;
       box-shadow: 0 4px 30px rgba(78,205,196,0.3);

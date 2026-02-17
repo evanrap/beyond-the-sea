@@ -6,6 +6,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Beyond the Sea</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9SVMMQ3ZZN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-9SVMMQ3ZZN');
+  </script>
   <link rel="preconnect" href="https://upload.wikimedia.org">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -1641,6 +1648,7 @@
       }
 
       // Set main destination info
+      gtag('event', 'destination_found', { place_name: result.name, country: result.country });
       const countryParts = [result.region, result.country].filter(Boolean);
       const arrowDeg = state.heading || 0;
       const distHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${arrowDeg}deg);flex-shrink:0"><path d="M7 10l5-5 5 5"/><path d="M12 5v14"/></svg>${formatDistance(result.distanceKm)}`;
@@ -1780,6 +1788,7 @@
     }
 
     function showError(msg) {
+      gtag('event', 'search_error', { error_message: msg });
       $('error-message').textContent = msg;
       showScreen('error');
     }
@@ -1868,6 +1877,7 @@
     // ===== Event Listeners =====
     $('btn-start').addEventListener('click', async () => {
       try {
+        gtag('event', 'begin_clicked');
         await requestPermissions();
         console.log(`[BTS] Location: ${state.userLat}, ${state.userLng}`);
         showScreen('result');
@@ -1889,6 +1899,7 @@
 
     function doSearch() {
       if (state.heading === null) return;
+      gtag('event', 'search_started');
       // Transition to post-search view on first search
       const preSearch = $('pre-search');
       const postSearch = $('post-search');

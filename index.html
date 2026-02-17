@@ -181,45 +181,70 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       flex: 1;
-      padding: calc(var(--safe-top) + 20px) 20px 40px;
+      padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bottom) + 28px);
       z-index: 1;
       text-align: center;
+      position: relative;
+    }
+    .pre-search::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(78,205,196,0.06) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
     }
     .pre-search__title {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 2rem;
-      font-weight: 400;
-      letter-spacing: 0.04em;
+      font-size: 2.6rem;
+      font-weight: 300;
+      letter-spacing: 0.08em;
       margin-bottom: 6px;
+      text-shadow: 0 0 60px rgba(78,205,196,0.2);
+      z-index: 1;
     }
     .pre-search__subtitle {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.2em;
       color: var(--white40);
-      margin-bottom: 36px;
+      margin-bottom: 0;
       font-weight: 500;
+      z-index: 1;
+    }
+    .pre-search__spacer {
+      flex: 1;
     }
     .pre-search__compass {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
-      margin-bottom: 32px;
+      margin-bottom: 0;
+      z-index: 1;
     }
     .pre-search__compass-outer {
       position: relative;
-      width: 200px;
-      height: 200px;
+      width: 260px;
+      height: 260px;
     }
     .pre-search__compass-ring {
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      border: 2px solid var(--white15);
+      border: 1px solid var(--white15);
+      box-shadow: 0 0 40px rgba(78,205,196,0.08), inset 0 0 30px rgba(78,205,196,0.03);
       transition: transform 0.3s ease;
+    }
+    .pre-search__compass-ring::after {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      border: 1.5px solid var(--white08);
+      pointer-events: none;
     }
     .pre-search__tick {
       position: absolute;
@@ -228,10 +253,17 @@
       letter-spacing: 0.05em;
       color: var(--white40);
     }
-    .pre-search__tick--n { top: 10px; left: 50%; transform: translateX(-50%); color: var(--teal); font-size: 0.85rem; }
-    .pre-search__tick--s { bottom: 10px; left: 50%; transform: translateX(-50%); }
-    .pre-search__tick--e { right: 10px; top: 50%; transform: translateY(-50%); }
-    .pre-search__tick--w { left: 10px; top: 50%; transform: translateY(-50%); }
+    .pre-search__tick--n { top: 18px; left: 50%; transform: translateX(-50%); color: var(--teal); font-size: 0.85rem; }
+    .pre-search__tick--s { bottom: 18px; left: 50%; transform: translateX(-50%); }
+    .pre-search__tick--e { right: 18px; top: 50%; transform: translateY(-50%); }
+    .pre-search__tick--w { left: 18px; top: 50%; transform: translateY(-50%); }
+    .compass-ticks-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
     /* Fixed heading arrow — always points UP (= user's facing direction) */
     .pre-search__heading-arrow {
       position: absolute;
@@ -249,17 +281,47 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 110px;
-      height: 110px;
+      width: 120px;
+      height: 120px;
       /* Needle also rotates with ring to always point north */
     }
+    .compass-center-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 10px rgba(78,205,196,0.6), 0 0 20px rgba(78,205,196,0.3);
+      z-index: 3;
+    }
     .heading-cardinal--large {
-      font-size: 1rem;
-      letter-spacing: 0.1em;
+      font-size: 1.8rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--teal);
+      text-shadow: 0 0 20px rgba(78,205,196,0.3);
+      letter-spacing: 0.04em;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
     }
     .search-btn--large {
-      padding: 14px 44px;
-      font-size: 1.05rem;
+      width: calc(100% - 32px);
+      max-width: 380px;
+      height: 56px;
+      padding: 0 24px;
+      font-size: 1rem;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #4ecdc4, #44b5ad);
+      background-image: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.15) 50%, transparent 75%);
+      background-color: #4ecdc4;
+      background-size: 200% 100%;
+      animation: shimmer 4s ease-in-out infinite;
+      color: var(--deep);
+      box-shadow: 0 4px 24px rgba(78,205,196,0.25);
     }
     .post-search {
       width: 100%;
@@ -303,6 +365,7 @@
       font-weight: 600;
       font-size: 0.7rem;
       letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
     }
 
     /* Search Button */
@@ -561,6 +624,30 @@
     .leaflet-control-zoom a:hover {
       background: rgba(10,22,40,0.95) !important;
     }
+    .lookup-popup .leaflet-popup-content-wrapper {
+      background: rgba(10, 22, 40, 0.92);
+      color: var(--white);
+      border: 1px solid var(--white15);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+    }
+    .lookup-popup .leaflet-popup-tip {
+      background: rgba(10, 22, 40, 0.92);
+      border: none;
+    }
+    .lookup-popup .leaflet-popup-content {
+      margin: 8px 12px;
+    }
+    .lookup-loading {
+      color: var(--white40);
+      font-style: italic;
+    }
+    .lookup-result {
+      color: var(--white);
+      font-weight: 500;
+    }
 
     /* Manual Heading Slider (desktop only) */
     @media (hover: none) and (pointer: coarse) {
@@ -676,7 +763,9 @@
       <!-- Pre-search view: shown before first search -->
       <div id="pre-search" class="pre-search">
         <h1 class="pre-search__title">Beyond the Sea</h1>
-        <p class="pre-search__subtitle">Face the direction you want to explore</p>
+        <p class="pre-search__subtitle">Point toward the water</p>
+
+        <div class="pre-search__spacer"></div>
 
         <div class="pre-search__compass">
           <div class="pre-search__compass-outer">
@@ -684,6 +773,52 @@
             <div class="pre-search__heading-arrow">&#x25B2;</div>
             <!-- Rotating ring: ring + labels + needle all rotate together -->
             <div id="compass-ring" class="pre-search__compass-ring">
+              <!-- Tick marks SVG -->
+              <svg class="compass-ticks-svg" viewBox="0 0 260 260">
+                <!-- Cardinal ticks (0°, 90°, 180°, 270°) — 12px long, 1.5px wide -->
+                <line x1="130" y1="6" x2="130" y2="18" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                <line x1="254" y1="130" x2="242" y2="130" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                <line x1="130" y1="254" x2="130" y2="242" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                <line x1="6" y1="130" x2="18" y2="130" stroke="white" stroke-width="1.5" opacity="0.6"/>
+                <!-- 30° interval ticks (30, 60, 120, 150, 210, 240, 300, 330) — 8px long, 1px wide -->
+                <line x1="192.0" y1="14.7" x2="188.5" y2="22.2" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="245.3" y1="68.0" x2="237.8" y2="71.5" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="245.3" y1="192.0" x2="237.8" y2="188.5" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="192.0" y1="245.3" x2="188.5" y2="237.8" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="68.0" y1="245.3" x2="71.5" y2="237.8" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="14.7" y1="192.0" x2="22.2" y2="188.5" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="14.7" y1="68.0" x2="22.2" y2="71.5" stroke="white" stroke-width="1" opacity="0.4" />
+                <line x1="68.0" y1="14.7" x2="71.5" y2="22.2" stroke="white" stroke-width="1" opacity="0.4" />
+                <!-- 10° minor ticks — 4px long, 0.5px wide -->
+                <line x1="151.5" y1="6.8" x2="150.9" y2="10.7" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="172.4" y1="9.5" x2="171.1" y2="13.3" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="210.3" y1="22.1" x2="208.1" y2="25.6" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="226.1" y1="33.9" x2="223.4" y2="36.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="237.9" y1="49.7" x2="234.4" y2="51.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="250.5" y1="87.6" x2="246.7" y2="88.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="253.2" y1="108.5" x2="249.3" y2="109.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="253.2" y1="151.5" x2="249.3" y2="150.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="250.5" y1="172.4" x2="246.7" y2="171.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="237.9" y1="210.3" x2="234.4" y2="208.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="226.1" y1="226.1" x2="223.4" y2="223.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="210.3" y1="237.9" x2="208.1" y2="234.4" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="172.4" y1="250.5" x2="171.1" y2="246.7" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="151.5" y1="253.2" x2="150.9" y2="249.3" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="108.5" y1="253.2" x2="109.1" y2="249.3" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="87.6" y1="250.5" x2="88.9" y2="246.7" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="49.7" y1="237.9" x2="51.9" y2="234.4" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="33.9" y1="226.1" x2="36.9" y2="223.4" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="22.1" y1="210.3" x2="25.6" y2="208.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="9.5" y1="172.4" x2="13.3" y2="171.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="6.8" y1="151.5" x2="10.7" y2="150.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="6.8" y1="108.5" x2="10.7" y2="109.1" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="9.5" y1="87.6" x2="13.3" y2="88.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="22.1" y1="49.7" x2="25.6" y2="51.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="33.9" y1="33.9" x2="36.9" y2="36.9" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="49.7" y1="22.1" x2="51.9" y2="25.6" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="87.6" y1="9.5" x2="88.9" y2="13.3" stroke="white" stroke-width="0.5" opacity="0.2" />
+                <line x1="108.5" y1="6.8" x2="109.1" y2="10.7" stroke="white" stroke-width="0.5" opacity="0.2" />
+              </svg>
               <span class="pre-search__tick pre-search__tick--n">N</span>
               <span class="pre-search__tick pre-search__tick--e">E</span>
               <span class="pre-search__tick pre-search__tick--s">S</span>
@@ -692,17 +827,19 @@
                 <svg viewBox="0 0 100 100" fill="none">
                   <polygon points="50,5 62,50 50,42 38,50" fill="#4ecdc4"/>
                   <polygon points="50,95 38,50 50,58 62,50" fill="rgba(255,255,255,0.2)"/>
-                  <circle cx="50" cy="50" r="4" fill="rgba(255,255,255,0.5)"/>
                 </svg>
               </div>
+              <div class="compass-center-dot"></div>
             </div>
           </div>
           <span id="heading-cardinal" class="heading-cardinal heading-cardinal--large">--</span>
         </div>
 
+        <div class="pre-search__spacer"></div>
+
         <button id="btn-search" class="search-btn search-btn--large">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-          Search
+          Search Across the Sea
         </button>
 
         <div id="computing-badge" class="computing-badge">
@@ -882,6 +1019,7 @@
       userLng: null,
       heading: null,
       smoothedHeading: null,
+      displayHeading: null,
       lastQueriedBucket: null,
       isComputing: false,
       currentResultName: null,
@@ -913,6 +1051,8 @@
     let routeLine = null;
     let routeMarkerStart = null;
     let routeMarkerEnd = null;
+    let lookupMarker = null;
+    let lookupPopup = null;
 
     function initMap() {
       if (routeMap) return;
@@ -930,6 +1070,38 @@
         subdomains: 'abcd',
         maxZoom: 19,
       }).addTo(routeMap);
+
+      routeMap.on('contextmenu', async function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // Remove previous lookup marker/popup
+        if (lookupMarker) routeMap.removeLayer(lookupMarker);
+        if (lookupPopup) routeMap.closePopup(lookupPopup);
+
+        // Show "looking up" popup immediately
+        lookupPopup = L.popup({ className: 'lookup-popup' })
+          .setLatLng(e.latlng)
+          .setContent('<span class="lookup-loading">Looking up...</span>')
+          .openOn(routeMap);
+
+        // Add a small marker at the tapped point
+        lookupMarker = L.circleMarker(e.latlng, {
+          radius: 5,
+          color: 'rgba(255,255,255,0.5)',
+          fillColor: 'rgba(78,205,196,0.4)',
+          fillOpacity: 0.6,
+          weight: 1,
+        }).addTo(routeMap);
+
+        try {
+          const place = await getPlaceInfo(lat, lng);
+          const parts = [place.name, place.region, place.country].filter(Boolean);
+          lookupPopup.setContent('<span class="lookup-result">' + parts.join(', ') + '</span>');
+        } catch (err) {
+          lookupPopup.setContent('<span class="lookup-result">Unknown location</span>');
+        }
+      });
     }
 
     function updateMap(startLat, startLng, endLat, endLng, placeName) {
@@ -1340,19 +1512,31 @@
     }
 
     function updateCompassDisplay(heading) {
-      const cardinal = getCardinal(heading);
       // Rotate the entire ring so N label points to actual north
       // (user faces heading°, so north is at -heading° from top of screen)
       const ringAngle = -heading;
       const ring = $('compass-ring');
       if (ring) ring.style.transform = `rotate(${ringAngle}deg)`;
-      // Cardinal text label (not rotated)
-      $('heading-cardinal').textContent = cardinal;
+
+      // Display-only smoothing (tighter than sensor EMA)
+      const DISPLAY_ALPHA = 0.08;
+      if (state.displayHeading === null) {
+        state.displayHeading = heading;
+      } else {
+        let dDiff = heading - state.displayHeading;
+        if (dDiff > 180) dDiff -= 360;
+        if (dDiff < -180) dDiff += 360;
+        state.displayHeading = (state.displayHeading + DISPLAY_ALPHA * dDiff + 360) % 360;
+      }
+      const displayDeg = Math.round(state.displayHeading);
+
+      // Numeric degree display (not rotated)
+      $('heading-cardinal').textContent = displayDeg + '\u00B0';
       // Update post-search compass (small needle in title bar)
       const sm = $('compass-needle-sm');
       if (sm) sm.style.transform = `rotate(${ringAngle}deg)`;
       const cardSm = $('heading-cardinal-sm');
-      if (cardSm) cardSm.textContent = cardinal;
+      if (cardSm) cardSm.textContent = displayDeg + '\u00B0';
       // Also sync the desktop slider if visible
       const slider = $('heading-slider');
       if (slider && !slider.parentElement.hidden) {

@@ -1,9 +1,17 @@
+# Natural Earth geodata
 ne_110m_land/
 ne_110m_land.zip
 ne_50m_land/
 ne_50m_land.zip
+
+# Generated build artifacts
 bitmap_data.js
 bitmap_data_50m.js
 bitmap_log.txt
 bitmap_log_50m.txt
+
+# Claude Code working files
 .claude/
+
+# Design mockups
+mock-*.html
